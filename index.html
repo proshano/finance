@@ -231,6 +231,11 @@
                         <input type="range" class="form-control-range slider" id="severance_rate" min="0" max="20" value="5" step="0.5">
                         <span id="severance_rate_value">5%</span>
                     </div>
+                    <div class="form-group">
+                        <label for="admin_premium">Base annual administrative premium per staff member ($):</label>
+                        <input type="range" class="form-control-range slider" id="admin_premium" min="0" max="10000" value="5000" step="500">
+                        <span id="admin_premium_value">$5,000</span>
+                    </div>
 
                 </div>
             </div>
@@ -331,6 +336,8 @@
                                     <li><strong>Annual raise (%):</strong> The annual salary increase percentage for staff beyond inflation.</li>
                                     <li><strong>Staff benefits rate (% of salary):</strong> The percentage added to staff salaries to cover benefits.</li>
                                     <li><strong>Severance accrual rate (% of salary):</strong> The percentage of salaries set aside monthly for severance costs.</li>
+                                    <li><strong>Administrative premium per staff member ($):</strong> Annual overhead cost per staff member to account for various realities of managing more poeple. Increases with inflation.</li>
+
                                 </ul>
                                 <p><strong>Simulation parameters:</strong></p>
                                 <ul>
@@ -370,7 +377,7 @@
     // Determine how to format the display based on slider ID
     if (id.includes('rate') || id.includes('overhead') || id.includes('benefits') || id.includes('severance') || id.includes('variability')) {
         display = value + '%';
-    } else if (id.includes('salary') || id.includes('cost') || id.includes('revenue') || id.includes('payment') || id.includes('expense')) {
+    } else if (id.includes('salary') || id.includes('cost') || id.includes('revenue') || id.includes('payment') || id.includes('expense') || id.includes('premium')) {
         display = '$' + Number(value).toLocaleString();
     } else {
         display = value;
@@ -487,7 +494,15 @@ const coordinator_salary_monthly = years_since_start.map((y, idx) =>
                     const benefits_multiplier = 1 + params.benefits_rate / 100;
                     const ra_costs_monthly = base_ra_costs_monthly.map(c => c * benefits_multiplier);
                     const coordinator_costs_monthly = base_coordinator_costs_monthly.map(c => c * benefits_multiplier);
-                    const staff_costs_monthly = ra_costs_monthly.map((c, i) => c + coordinator_costs_monthly[i]);
+                     
+                    //administrative premium
+                    const total_staff_monthly = num_ras_employed.map((ras, i) => ras + num_coordinators_employed[i]);
+                    const admin_premium_monthly = total_staff_monthly.map((staff, i) => 
+                     (params.admin_premium / 12) * staff * inflation_adjustments[i]
+                    );
+
+                    const staff_costs_monthly = ra_costs_monthly.map((c, i) => c + coordinator_costs_monthly[i] + admin_premium_monthly[i]);
+
 
                     // Severance accrual
                     const severance_cost_monthly = base_ra_costs_monthly.map((c, i) => 
@@ -601,6 +616,7 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
                         ra_costs_monthly: ra_costs_monthly,
                         coordinator_costs_monthly: coordinator_costs_monthly,
                         severance_cost_monthly: severance_cost_monthly,
+                        admin_premium_monthly: admin_premium_monthly, 
                         per_patient_expenses_monthly: per_patient_expenses_monthly,
                         active_studies: active_studies,
                         num_ras_employed: num_ras_employed,
@@ -853,16 +869,19 @@ function renderYearlyBreakdownTable(fin, params) {
                 }
 
  // Function to render metrics table
-function renderMetricsTable(fin, params) {
+ function renderMetricsTable(fin, params) {
     // Calculate total studies started and closed
     const total_studies_started = fin.months.length * (params.new_studies_per_year / 12);
     const total_studies_closed = fin.months
         .filter(m => m > params.study_duration)
         .length * (params.new_studies_per_year / 12);
 
+    // First calculate the total admin premium
+    const total_admin_premium = fin.admin_premium_monthly.reduce((a, b) => a + b, 0);
+
     let metrics = [
-    ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()],
-    ['Total Studies Started', Math.round(total_studies_started).toLocaleString()],
+        ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()],
+        ['Total Studies Started', Math.round(total_studies_started).toLocaleString()],
         ['Total Studies Completed', Math.round(total_studies_closed).toLocaleString()],
         ['Total Revenue', formatCurrency(fin.total_revenue)],
         ['Total Costs', formatCurrency(fin.total_costs)],
@@ -871,7 +890,8 @@ function renderMetricsTable(fin, params) {
         ['Internal Rate of Return', fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'],
         ['Total Overhead Deducted', formatCurrency(fin.institute_overhead_monthly.reduce((a, b) => a + b, 0))],
         ['Total Research Assistant Spend', formatCurrency(fin.total_ra_spend)],
-        ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)]
+        ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)],
+        ['Total Staff Administration Spend', formatCurrency(total_admin_premium)]  // Add this line
     ];
 
     let table = `
@@ -921,6 +941,7 @@ function renderMetricsTable(fin, params) {
         coordinators_per_study: 1 / parseFloat($('#studies_per_coordinator').val()), // Convert from studies per coordinator to coordinators per study
         benefits_rate: parseFloat($('#benefits_rate').val()),
         severance_rate: parseFloat($('#severance_rate').val()),
+        admin_premium: parseFloat($('#admin_premium').val()),
 
         total_months: parseInt($('#total_months').val())
     };
