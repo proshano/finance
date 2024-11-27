@@ -236,6 +236,15 @@
                         <input type="range" class="form-control-range slider" id="admin_premium" min="0" max="10000" value="5000" step="500">
                         <span id="admin_premium_value">$5,000</span>
                     </div>
+                    <div class="form-group">
+                        <label for="allow_fractional_staff">Allow Fractional Staff:</label>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="allow_fractional_staff">
+                            <label class="custom-control-label" for="allow_fractional_staff">Enable fractional staff hiring</label>
+                        </div>
+                        <small class="form-text text-muted">When enabled, staff can be hired in fractional amounts (e.g., 0.5 FTE) depending on the number of active studies, as in a shared staffing model. The default is hiring whole staff only.</small>
+                    </div>
+                    
 
                 </div>
             </div>
@@ -460,21 +469,30 @@ function calculateNPV(cashFlows, annualDiscountRate) {
                         val - studies_completed[idx]
                     );
 
-                    // Staffing calculations
-                    const required_num_ras = active_studies.map(s => Math.ceil(s * params.ras_per_study));
-                    const required_num_coordinators = active_studies.map(s => Math.ceil(s * params.coordinators_per_study));
+                    // Staffing calculations with fractional toggle
+    const required_num_ras = active_studies.map(s => 
+        params.allow_fractional_staff ? 
+            s * params.ras_per_study : 
+            Math.ceil(s * params.ras_per_study)
+    );
+    
+    const required_num_coordinators = active_studies.map(s => 
+        params.allow_fractional_staff ? 
+            s * params.coordinators_per_study : 
+            Math.ceil(s * params.coordinators_per_study)
+    );
 
-                    // Staff employment (no-decrease constraint)
-                    const num_ras_employed = [];
-                    const num_coordinators_employed = [];
-                    let max_ras = 0;
-                    let max_coordinators = 0;
-                    for (let i = 0; i < months.length; i++) {
-                        max_ras = Math.max(max_ras, required_num_ras[i]);
-                        max_coordinators = Math.max(max_coordinators, required_num_coordinators[i]);
-                        num_ras_employed.push(max_ras);
-                        num_coordinators_employed.push(max_coordinators);
-                    }
+    // Staff employment (no-decrease constraint)
+    const num_ras_employed = [];
+    const num_coordinators_employed = [];
+    let max_ras = 0;
+    let max_coordinators = 0;
+    for (let i = 0; i < months.length; i++) {
+        max_ras = Math.max(max_ras, required_num_ras[i]);
+        max_coordinators = Math.max(max_coordinators, required_num_coordinators[i]);
+        num_ras_employed.push(max_ras);
+        num_coordinators_employed.push(max_coordinators);
+    }
 
 // Salary calculations with both inflation and annual raises
 const ra_salary_monthly = years_since_start.map((y, idx) => 
@@ -602,30 +620,31 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
 
                     // Return results
                     return {
-                        months: months,
-                        net_profit_monthly: net_profit_monthly,
-                        cumulative_net_profit: cumulative_net_profit,
-                        total_revenue: total_revenue_monthly.reduce((a, b) => a + b, 0),
-                        total_costs: total_costs_monthly.reduce((a, b) => a + b, 0),
-                        net_profit: net_profit_monthly.reduce((a, b) => a + b, 0),
-                        npv: npv,
-                        irr: irr,
-                        total_revenue_monthly: total_revenue_monthly,
-                        total_costs_monthly: total_costs_monthly,
-                        staff_costs_monthly: staff_costs_monthly,
-                        ra_costs_monthly: ra_costs_monthly,
-                        coordinator_costs_monthly: coordinator_costs_monthly,
-                        severance_cost_monthly: severance_cost_monthly,
-                        admin_premium_monthly: admin_premium_monthly, 
-                        per_patient_expenses_monthly: per_patient_expenses_monthly,
-                        active_studies: active_studies,
-                        num_ras_employed: num_ras_employed,
-                        num_coordinators_employed: num_coordinators_employed,
-                        institute_overhead_monthly: total_overhead_deducted_monthly,
-                        total_patients_recruited: total_patients_recruited.reduce((a, b) => a + b, 0),
-                        total_ra_spend: total_ra_spend,
-                        total_coordinator_spend: total_coordinator_spend
-                    };
+    months: months,
+    net_profit_monthly: net_profit_monthly,
+    cumulative_net_profit: cumulative_net_profit,
+    total_revenue: total_revenue_monthly.reduce((a, b) => a + b, 0),
+    total_costs: total_costs_monthly.reduce((a, b) => a + b, 0),
+    net_profit: net_profit_monthly.reduce((a, b) => a + b, 0),
+    npv: npv,
+    irr: irr,
+    total_revenue_monthly: total_revenue_monthly,
+    total_costs_monthly: total_costs_monthly,
+    staff_costs_monthly: staff_costs_monthly,
+    ra_costs_monthly: ra_costs_monthly,
+    coordinator_costs_monthly: coordinator_costs_monthly,
+    severance_cost_monthly: severance_cost_monthly,
+    admin_premium_monthly: admin_premium_monthly,
+    per_patient_expenses_monthly: per_patient_expenses_monthly,
+    active_studies: active_studies,
+    num_ras_employed: num_ras_employed,
+    num_coordinators_employed: num_coordinators_employed,
+    institute_overhead_monthly: total_overhead_deducted_monthly,
+    total_patients_recruited: total_patients_recruited.reduce((a, b) => a + b, 0),
+    total_ra_spend: total_ra_spend,
+    total_coordinator_spend: total_coordinator_spend,
+    params: params  // Add this line
+};
                 }
 
                 // IRR calculation function using Newton-Raphson method
@@ -707,34 +726,38 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
 
                 // Function to render staffing levels plot
                 function renderStaffingLevelsPlot(fin) {
-                    let data = [
-                        {
-                            x: fin.months,
-                            y: fin.num_ras_employed,
-                            type: 'scatter',
-                            mode: 'lines',
-                            name: 'RAs Employed',
-                            line: { color: '#1f77b4' }
-                        },
-                        {
-                            x: fin.months,
-                            y: fin.num_coordinators_employed,
-                            type: 'scatter',
-                            mode: 'lines',
-                            name: 'Coordinators Employed',
-                            line: { color: '#ff7f0e' }
-                        }
-                    ];
-                    let layout = {
-                        title: 'Staffing Levels Over Time',
-                        xaxis: { title: 'Month' },
-                        yaxis: { title: 'Number of Staff', tickformat: 'd' },
-                        hovermode: 'x unified',
-                        height: 400  // Adjusted height
-                    };
-                    Plotly.newPlot('staffing_levels_plot', data, layout, {responsive: true});
-                }
-// Function to aggregate monthly data into yearly summaries
+    let data = [
+        {
+            x: fin.months,
+            y: fin.num_ras_employed,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'RAs Employed',
+            line: { color: '#1f77b4' }
+        },
+        {
+            x: fin.months,
+            y: fin.num_coordinators_employed,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Coordinators Employed',
+            line: { color: '#ff7f0e' }
+        }
+    ];
+    
+    let layout = {
+        title: 'Staffing Levels Over Time',
+        xaxis: { title: 'Month' },
+        yaxis: { 
+            title: 'Number of Staff',
+            tickformat: fin.params?.allow_fractional_staff ? '.2f' : 'd'
+        },
+        hovermode: 'x unified',
+        height: 400
+    };
+    
+    Plotly.newPlot('staffing_levels_plot', data, layout, {responsive: true});
+}
 // Function to aggregate monthly data into yearly summaries
 function calculateYearlyBreakdown(fin, params) {
     const years = Math.ceil(params.total_months / 12);
@@ -745,7 +768,6 @@ function calculateYearlyBreakdown(fin, params) {
         const startMonth = year * 12;
         const endMonth = Math.min((year + 1) * 12, params.total_months);
         
-        // Initialize yearly totals
         const yearData = {
             year: year + 1,
             revenue: {
@@ -765,26 +787,22 @@ function calculateYearlyBreakdown(fin, params) {
             cumulativeProfit: 0
         };
         
-        // Sum up monthly values for the year
+        let monthCount = 0;
         for (let month = startMonth; month < endMonth; month++) {
             yearData.revenue.total += fin.total_revenue_monthly[month];
             yearData.costs.staff += fin.staff_costs_monthly[month];
             yearData.costs.total += fin.total_costs_monthly[month];
             yearData.metrics.avgRAs += fin.num_ras_employed[month];
             yearData.metrics.avgCoordinators += fin.num_coordinators_employed[month];
+            monthCount++;
         }
         
-        // Get end-of-year active studies count
-        yearData.metrics.activeStudies = Math.round(fin.active_studies[endMonth - 1]);
+        yearData.metrics.activeStudies = fin.active_studies[endMonth - 1];
+        yearData.metrics.avgRAs = yearData.metrics.avgRAs / monthCount;
+        yearData.metrics.avgCoordinators = yearData.metrics.avgCoordinators / monthCount;
         
-        // Calculate averages for other metrics
-        const monthsInYear = endMonth - startMonth;
-        yearData.metrics.avgRAs = Math.round(yearData.metrics.avgRAs / monthsInYear);
-        yearData.metrics.avgCoordinators = Math.round(yearData.metrics.avgCoordinators / monthsInYear);
         yearData.costs.other = yearData.costs.total - yearData.costs.staff;
         yearData.profit = yearData.revenue.total - yearData.costs.total;
-        
-        // Calculate cumulative profit
         cumulativeProfit += yearData.profit;
         yearData.cumulativeProfit = cumulativeProfit;
         
@@ -797,6 +815,10 @@ function calculateYearlyBreakdown(fin, params) {
 // Function to render the yearly breakdown table
 function renderYearlyBreakdownTable(fin, params) {
     const yearlyData = calculateYearlyBreakdown(fin, params);
+    
+    function formatStaffCount(count, allowFractional) {
+        return allowFractional ? count.toFixed(2) : Math.round(count);
+    }
     
     let tableHtml = `
         <table class="table table-bordered table-striped">
@@ -826,8 +848,8 @@ function renderYearlyBreakdownTable(fin, params) {
                 <td>${formatCurrency(year.costs.total)}</td>
                 <td class="${year.profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(year.profit)}</td>
                 <td class="${year.cumulativeProfit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(year.cumulativeProfit)}</td>
-                <td>${year.metrics.activeStudies}</td>
-                <td>${year.metrics.avgRAs}/${year.metrics.avgCoordinators}</td>
+                <td>${formatStaffCount(year.metrics.activeStudies, false)}</td>
+                <td>${formatStaffCount(year.metrics.avgRAs, params.allow_fractional_staff)}/${formatStaffCount(year.metrics.avgCoordinators, params.allow_fractional_staff)}</td>
             </tr>
         `;
     });
@@ -942,6 +964,7 @@ function renderYearlyBreakdownTable(fin, params) {
         benefits_rate: parseFloat($('#benefits_rate').val()),
         severance_rate: parseFloat($('#severance_rate').val()),
         admin_premium: parseFloat($('#admin_premium').val()),
+        allow_fractional_staff: $('#allow_fractional_staff').is(':checked'),
 
         total_months: parseInt($('#total_months').val())
     };
