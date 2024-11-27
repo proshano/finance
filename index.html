@@ -391,6 +391,17 @@
                     return value.toFixed(1) + '%';
                 }
 
+                function calculateEffectiveMonthlyRate(annualRate) {
+    return Math.pow(1 + annualRate / 100, 1/12) - 1;
+}
+
+function calculateNPV(cashFlows, annualDiscountRate) {
+    const monthlyRate = calculateEffectiveMonthlyRate(annualDiscountRate);
+    return cashFlows.reduce((acc, cf, i) => 
+        acc + cf / Math.pow(1 + monthlyRate, i), 0
+    );
+}
+
                 // Function to perform calculations
                 function calculateFinancials(params) {
     // Create month array
@@ -553,13 +564,8 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
                     const initial_investment = - (startup_costs_monthly[0] + fixed_costs_monthly[0] + staff_costs_monthly[0] + severance_cost_monthly[0] + per_patient_expenses_monthly[0] + closeout_costs_monthly[0]);
                     const cash_flows = [initial_investment, ...net_profit_monthly];
 
-                    // Discount rate calculations
-                    const discount_rate_monthly = params.discount_rate / 100 / 12;
-
-                    // NPV calculation
-                    const npv = cash_flows.reduce((acc, cf, i) => 
-                        acc + cf / Math.pow(1 + discount_rate_monthly, i), 0
-                    );
+                    // NPV calculations
+                    const npv = calculateNPV(cash_flows, params.discount_rate);
 
                     // IRR calculation
                     const irr = calculateIRR(cash_flows);
@@ -600,27 +606,51 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
 
                 // IRR calculation function using Newton-Raphson method
                 function calculateIRR(cashFlows) {
-                    let irrResult = null;
-                    let guess = 0.1; // Initial guess
-                    let maxIteration = 1000;
-                    let epsMax = 1e-10;
+    let guess = 0.1; // Initial guess (10%)
+    const maxIterations = 1000;
+    const tolerance = 1e-10;
 
-                    for (let i = 0; i < maxIteration; i++) {
-                        let npv = 0;
-                        let derivative = 0;
-                        for (let t = 0; t < cashFlows.length; t++) {
-                            npv += cashFlows[t] / Math.pow(1 + guess, t);
-                            derivative -= t * cashFlows[t] / Math.pow(1 + guess, t + 1);
-                        }
-                        let newGuess = guess - npv / derivative;
-                        if (Math.abs(newGuess - guess) < epsMax) {
-                            irrResult = newGuess;
-                            break;
-                        }
-                        guess = newGuess;
-                    }
-                    return irrResult;
-                }
+    function npvAtRate(rate) {
+        const monthlyRate = calculateEffectiveMonthlyRate(rate);
+        return cashFlows.reduce((acc, cf, i) => 
+            acc + cf / Math.pow(1 + monthlyRate, i), 0
+        );
+    }
+
+    function derivativeAtRate(rate) {
+        const monthlyRate = calculateEffectiveMonthlyRate(rate);
+        return cashFlows.reduce((acc, cf, i) => 
+            acc - (i * cf) / Math.pow(1 + monthlyRate, i + 1), 0
+        );
+    }
+
+    // Newton-Raphson iteration
+    for (let i = 0; i < maxIterations; i++) {
+        const npv = npvAtRate(guess);
+        const derivative = derivativeAtRate(guess);
+        
+        // Avoid division by zero
+        if (Math.abs(derivative) < 1e-10) {
+            return null;
+        }
+
+        const nextGuess = guess - npv / derivative;
+        
+        // Check for convergence
+        if (Math.abs(nextGuess - guess) < tolerance) {
+            return nextGuess;
+        }
+
+        // Check for invalid results
+        if (isNaN(nextGuess) || !isFinite(nextGuess)) {
+            return null;
+        }
+
+        guess = nextGuess;
+    }
+
+    return null; // Return null if no convergence
+}
 
                 // Function to render the cash flow plot
                 function renderCashFlowPlot(fin) {
