@@ -14,90 +14,88 @@
     <!-- Custom CSS -->
     <style>
         html, body {
-            height: 100%;
             margin: 0;
             font-family: Arial, sans-serif;
         }
-
+    
+        .container-fluid {
+            padding: 20px;
+        }
+    
         #sidebar {
-            max-height: 90vh;
-            overflow-y: auto;
-            padding-right: 15px;
             background-color: #f8f9fa;
             padding: 20px;
             border-radius: 8px;
+            margin-bottom: 30px;
         }
-
+    
         .slider {
             width: 100%;
         }
-
+    
         .form-group {
             margin-bottom: 20px;
         }
-
+    
         #dashboard {
             padding: 20px;
+            position: sticky;
+            top: 20px;
         }
-
+    
         #metrics_table table {
             width: 100%;
             border-collapse: collapse;
         }
-
+    
         #metrics_table th, #metrics_table td {
             border: 1px solid #ddd;
             padding: 8px;
         }
-
-        #metrics_table tr:nth-child(even){background-color: #f2f2f2;}
-
+    
+        #metrics_table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    
         #metrics_table th {
             background-color: #4CAF50;
             color: white;
         }
-
+    
         #explanations {
             margin-top: 20px;
         }
-
+    
         #explanations h5 {
             font-weight: bold;
         }
-
+    
         #explanations ul {
             list-style-type: disc;
             padding-left: 20px;
         }
-
-        /* Adjust the plot heights */
+    
         .plot-container {
             height: 400px;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
+    
         .plot-container-large {
             height: 500px;
         }
-
-        /* Remove fixed height to allow scrolling */
+    
         .full-height-row {
             margin: 0;
         }
-
-        /* Optional: Enhance the appearance of metric cards */
+    
         .metric-card {
             background-color: #fff;
             border-radius: 8px;
             padding: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Optional: Enhance the appearance of plot containers */
-        .plot-container {
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 20px;
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -110,6 +108,16 @@
             <!-- Sidebar -->
             <div class="col-md-3">
                 <div id="sidebar">
+                                        <!-- Simulation Parameters -->
+                                        <h3>Simulation Parameters</h3>
+                                        <div class="form-group">
+                                            <label for="total_months">Total Simulation Duration (months):</label>
+                                            <input type="range" class="form-control-range slider" id="total_months" min="12" max="60" value="60" step="1">
+                                            <span id="total_months_value">60</span>
+                                        </div>
+                    
+                                        <button id="calculate" class="btn btn-primary mb-3">Run Simulation</button>
+                                        
                     <!-- Startup and Closeout Parameters -->
                     <h3>Startup and Closeout Parameters</h3>
                     <div class="form-group">
@@ -222,28 +230,6 @@
                         <span id="severance_rate_value">5%</span>
                     </div>
 
-                    <!-- Risk Parameters -->
-                    <h3>Risk Parameters</h3>
-                    <div class="form-group">
-                        <label for="recruitment_variability">Recruitment Variability (%):</label>
-                        <input type="range" class="form-control-range slider" id="recruitment_variability" min="-20" max="20" value="0" step="1">
-                        <span id="recruitment_variability_value">0%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="cost_variability">Cost Variability (%):</label>
-                        <input type="range" class="form-control-range slider" id="cost_variability" min="-20" max="20" value="0" step="1">
-                        <span id="cost_variability_value">0%</span>
-                    </div>
-
-                    <!-- Simulation Parameters -->
-                    <h3>Simulation Parameters</h3>
-                    <div class="form-group">
-                        <label for="total_months">Total Simulation Duration (months):</label>
-                        <input type="range" class="form-control-range slider" id="total_months" min="12" max="60" value="60" step="1">
-                        <span id="total_months_value">60</span>
-                    </div>
-
-                    <button id="calculate" class="btn btn-primary mb-3">Run Simulation</button>
                 </div>
             </div>
 
@@ -295,9 +281,10 @@
 
                         <!-- Key Metrics Tab -->
                         <div class="tab-pane fade" id="key-metrics" role="tabpanel" aria-labelledby="key-metrics-tab">
-                            <h4 class="mt-3">Key Metrics</h4>
+                            <h4 class="mt-3"><span id="forecast-title"></span></h4>
                             <div id="metrics_table"></div>
                         </div>
+                        
 
                         <!-- Explanations Tab -->
                         <div class="tab-pane fade" id="explanations" role="tabpanel" aria-labelledby="explanations-tab">
@@ -336,11 +323,6 @@
                                     <li><strong>Number of Coordinators per Study:</strong> The number of Coordinators required per active study.</li>
                                     <li><strong>Staff Benefits Rate (% of Salary):</strong> The percentage added to staff salaries to cover benefits.</li>
                                     <li><strong>Severance Accrual Rate (% of Salary):</strong> The percentage of salaries set aside monthly for severance costs.</li>
-                                </ul>
-                                <p><strong>Risk Parameters:</strong></p>
-                                <ul>
-                                    <li><strong>Recruitment Variability (%):</strong> The expected variability in recruitment rates.</li>
-                                    <li><strong>Cost Variability (%):</strong> The expected variability in costs.</li>
                                 </ul>
                                 <p><strong>Simulation Parameters:</strong></p>
                                 <ul>
@@ -411,26 +393,22 @@
 
                 // Function to perform calculations
                 function calculateFinancials(params) {
-                    // Create month array
-                    const months = Array.from({length: params.total_months}, (_, i) => i + 1);
-                    const years_since_start = months.map(m => Math.floor((m - 1) / 12));
+    // Create month array
+    const months = Array.from({length: params.total_months}, (_, i) => i + 1);
+    const years_since_start = months.map(m => Math.floor((m - 1) / 12));
 
-                    // Calculate inflation adjustments
-                    const inflation_adjustments = months.map(m => 
-                        Math.pow(1 + params.inflation_rate / 100, m / 12)
-                    );
+    // Calculate inflation adjustments
+    const inflation_adjustments = months.map(m => 
+        Math.pow(1 + params.inflation_rate / 100, m / 12)
+    );
 
-                    // Apply risk adjustments
-                    const adjusted_recruitment_rate = params.patients_per_month * 
-                        (1 + params.recruitment_variability / 100);
-                    const adjusted_fixed_costs = params.fixed_costs * 
-                        (1 + params.cost_variability / 100);
-                    const adjusted_startup_cost = params.startup_cost * 
-                        (1 + params.cost_variability / 100);
-                    const adjusted_closeout_cost = params.closeout_cost * 
-                        (1 + params.cost_variability / 100);
-                    const adjusted_per_patient_expense = params.per_patient_expense * 
-                        (1 + params.cost_variability / 100);
+                    // Here I used to have variability adjustments that I ultimately removed; could add again.
+                    const adjusted_recruitment_rate = params.patients_per_month;
+                    const adjusted_fixed_costs = params.fixed_costs;
+                    const adjusted_startup_cost = params.startup_cost;
+                    const adjusted_closeout_cost = params.closeout_cost;
+                    const adjusted_per_patient_expense = params.per_patient_expense;
+                
 
                     // Monthly new studies (fractional)
                     const monthly_new_studies = params.new_studies_per_year / 12;
@@ -472,13 +450,13 @@
                         num_coordinators_employed.push(max_coordinators);
                     }
 
-                    // Salary calculations with adjustments
-                    const ra_salary_monthly = years_since_start.map(y => 
-                        params.ra_salary * Math.pow(1 + params.annual_raise / 100, y) * (1 + params.cost_variability / 100)
-                    );
-                    const coordinator_salary_monthly = years_since_start.map(y => 
-                        params.coordinator_salary * Math.pow(1 + params.annual_raise / 100, y) * (1 + params.cost_variability / 100)
-                    );
+// Salary calculations with adjustments
+const ra_salary_monthly = years_since_start.map(y => 
+    params.ra_salary * Math.pow(1 + params.annual_raise / 100, y)
+);
+const coordinator_salary_monthly = years_since_start.map(y => 
+    params.coordinator_salary * Math.pow(1 + params.annual_raise / 100, y)
+);
 
                     // Staff costs with benefits
                     const base_ra_costs_monthly = num_ras_employed.map((n, i) => n * ra_salary_monthly[i]);
@@ -726,90 +704,98 @@
                     Plotly.newPlot('staff_costs_plot', data, layout, {responsive: true});
                 }
 
-                // Function to render metrics table
-                function renderMetricsTable(fin) {
-                    let metrics = [
-                    ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()],
-                    ['Total Revenue', formatCurrency(fin.total_revenue)],
-                        ['Total Costs', formatCurrency(fin.total_costs)],
-                        ['Net Profit', formatCurrency(fin.net_profit)],
-                        ['Net Present Value', formatCurrency(fin.npv)],
-                        ['Internal Rate of Return', fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'],
-                        ['Total Overhead Deducted', formatCurrency(fin.institute_overhead_monthly.reduce((a, b) => a + b, 0))],
-                        ['Total Research Assistant Spend', formatCurrency(fin.total_ra_spend)],
-                        ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)]
-                    ];
+ // Function to render metrics table
+function renderMetricsTable(fin, params) {
+    // Calculate total studies started and closed
+    const total_studies_started = fin.months.length * (params.new_studies_per_year / 12);
+    const total_studies_closed = fin.months
+        .filter(m => m > params.study_duration)
+        .length * (params.new_studies_per_year / 12);
 
-                    let table = `
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Metric</th>
-                                    <th>Value</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${metrics.map(([metric, value]) => `
-                                    <tr>
-                                        <td>${metric}</td>
-                                        <td>${value}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                    $('#metrics_table').html(table);
-                }
+    let metrics = [
+        ['Total Studies Started', Math.round(total_studies_started).toLocaleString()],
+        ['Total Studies Completed', Math.round(total_studies_closed).toLocaleString()],
+        ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()],
+        ['Total Revenue', formatCurrency(fin.total_revenue)],
+        ['Total Costs', formatCurrency(fin.total_costs)],
+        ['Net Profit', formatCurrency(fin.net_profit)],
+        ['Net Present Value', formatCurrency(fin.npv)],
+        ['Internal Rate of Return', fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'],
+        ['Total Overhead Deducted', formatCurrency(fin.institute_overhead_monthly.reduce((a, b) => a + b, 0))],
+        ['Total Research Assistant Spend', formatCurrency(fin.total_ra_spend)],
+        ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)]
+    ];
+
+    let table = `
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${metrics.map(([metric, value]) => `
+                    <tr>
+                        <td>${metric}</td>
+                        <td>${value}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    $('#metrics_table').html(table);
+}
 
                 // Function to run the simulation
                 function runSimulation() {
                     // Collect inputs
                     let params = {
-                        startup_revenue: parseFloat($('#startup_revenue').val()),
-                        startup_cost: parseFloat($('#startup_cost').val()),
-                        closeout_revenue: parseFloat($('#closeout_revenue').val()),
-                        closeout_cost: parseFloat($('#closeout_cost').val()),
-                        new_studies_per_year: parseFloat($('#new_studies_per_year').val()),
+        startup_revenue: parseFloat($('#startup_revenue').val()),
+        startup_cost: parseFloat($('#startup_cost').val()),
+        closeout_revenue: parseFloat($('#closeout_revenue').val()),
+        closeout_cost: parseFloat($('#closeout_cost').val()),
+        new_studies_per_year: parseFloat($('#new_studies_per_year').val()),
 
-                        study_duration: parseFloat($('#study_duration').val()),
-                        per_patient_payment: parseFloat($('#per_patient_payment').val()),
-                        per_patient_expense: parseFloat($('#per_patient_expense').val()),
-                        patients_per_month: parseFloat($('#patients_per_month').val()),
-                        inflation_rate: parseFloat($('#inflation_rate').val()),
-                        fixed_costs: parseFloat($('#fixed_costs').val()),
-                        discount_rate: parseFloat($('#discount_rate').val()),
-                        institute_overhead: parseFloat($('#institute_overhead').val()),
+        study_duration: parseFloat($('#study_duration').val()),
+        per_patient_payment: parseFloat($('#per_patient_payment').val()),
+        per_patient_expense: parseFloat($('#per_patient_expense').val()),
+        patients_per_month: parseFloat($('#patients_per_month').val()),
+        inflation_rate: parseFloat($('#inflation_rate').val()),
+        fixed_costs: parseFloat($('#fixed_costs').val()),
+        discount_rate: parseFloat($('#discount_rate').val()),
+        institute_overhead: parseFloat($('#institute_overhead').val()),
 
-                        ra_salary: parseFloat($('#ra_salary').val()),
-                        coordinator_salary: parseFloat($('#coordinator_salary').val()),
-                        annual_raise: parseFloat($('#annual_raise').val()),
-                        ras_per_study: parseFloat($('#ras_per_study').val()),
-                        coordinators_per_study: parseFloat($('#coordinators_per_study').val()),
-                        benefits_rate: parseFloat($('#benefits_rate').val()),
-                        severance_rate: parseFloat($('#severance_rate').val()),
+        ra_salary: parseFloat($('#ra_salary').val()),
+        coordinator_salary: parseFloat($('#coordinator_salary').val()),
+        annual_raise: parseFloat($('#annual_raise').val()),
+        ras_per_study: parseFloat($('#ras_per_study').val()),
+        coordinators_per_study: parseFloat($('#coordinators_per_study').val()),
+        benefits_rate: parseFloat($('#benefits_rate').val()),
+        severance_rate: parseFloat($('#severance_rate').val()),
 
-                        recruitment_variability: parseFloat($('#recruitment_variability').val()),
-                        cost_variability: parseFloat($('#cost_variability').val()),
+        total_months: parseInt($('#total_months').val())
+    };
 
-                        total_months: parseInt($('#total_months').val())
-                    };
+    // Perform calculations
+    let fin = calculateFinancials(params);
 
-                    // Perform calculations
-                    let fin = calculateFinancials(params);
+    // Update outputs
+    $('#forecast-title').text(params.total_months + ' month forecast');
+    
+    // Rest of the output updates...
+    $('#total_revenue_output').text(`Total Revenue over ${params.total_months} months: ${formatCurrency(fin.total_revenue)}`);
+    $('#net_profit_output').text(`Net Profit over ${params.total_months} months: ${formatCurrency(fin.net_profit)}`);
+    $('#npv_output').text(`Net Present Value (NPV): ${formatCurrency(fin.npv)}`);
+    $('#irr_output').text(`Internal Rate of Return (IRR): ${fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'}`);
+    $('#total_patients_output').text(`Total Patients Recruited over ${params.total_months} months: ${Math.round(fin.total_patients_recruited).toLocaleString()}`);
 
-                    // Update outputs
-                    $('#total_revenue_output').text(`Total Revenue over ${params.total_months} months: ${formatCurrency(fin.total_revenue)}`);
-                    $('#net_profit_output').text(`Net Profit over ${params.total_months} months: ${formatCurrency(fin.net_profit)}`);
-                    $('#npv_output').text(`Net Present Value (NPV): ${formatCurrency(fin.npv)}`);
-                    $('#irr_output').text(`Internal Rate of Return (IRR): ${fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'}`);
-                    $('#total_patients_output').text(`Total Patients Recruited over ${params.total_months} months: ${Math.round(fin.total_patients_recruited).toLocaleString()}`);
-
-                    // Render plots and tables
-                    renderCashFlowPlot(fin);
-                    renderStaffingLevelsPlot(fin);
-                    renderStaffCostsPlot(fin);
-                    renderMetricsTable(fin);
-                }
+    // Render plots and tables
+    renderCashFlowPlot(fin);
+    renderStaffingLevelsPlot(fin);
+    renderStaffCostsPlot(fin);
+    renderMetricsTable(fin,params);
+}
 
                 // Initialize the first tab as active
                 $('.nav-tabs a[href="#key-metrics"]').tab('show');
