@@ -397,9 +397,9 @@
     const months = Array.from({length: params.total_months}, (_, i) => i + 1);
     const years_since_start = months.map(m => Math.floor((m - 1) / 12));
 
-    // Calculate inflation adjustments
+    // Calculate inflation adjustments - changed to use annual steps
     const inflation_adjustments = months.map(m => 
-        Math.pow(1 + params.inflation_rate / 100, m / 12)
+        Math.pow(1 + params.inflation_rate / 100, Math.floor((m - 1) / 12))
     );
 
                     // Here I used to have variability adjustments that I ultimately removed; could add again.
@@ -450,12 +450,16 @@
                         num_coordinators_employed.push(max_coordinators);
                     }
 
-// Salary calculations with adjustments
-const ra_salary_monthly = years_since_start.map(y => 
-    params.ra_salary * Math.pow(1 + params.annual_raise / 100, y)
+// Salary calculations with both inflation and annual raises
+const ra_salary_monthly = years_since_start.map((y, idx) => 
+    params.ra_salary * 
+    Math.pow(1 + params.annual_raise / 100, y) *   // Annual raise
+    inflation_adjustments[idx]                      // Inflation adjustment
 );
-const coordinator_salary_monthly = years_since_start.map(y => 
-    params.coordinator_salary * Math.pow(1 + params.annual_raise / 100, y)
+const coordinator_salary_monthly = years_since_start.map((y, idx) => 
+    params.coordinator_salary * 
+    Math.pow(1 + params.annual_raise / 100, y) *   // Annual raise
+    inflation_adjustments[idx]                      // Inflation adjustment
 );
 
                     // Staff costs with benefits
@@ -475,34 +479,36 @@ const coordinator_salary_monthly = years_since_start.map(y =>
                     const institute_overhead_rate = params.institute_overhead / 100;
 
                     // Startup revenue and costs
-                    const startup_revenue_monthly_pre_overhead = studies_started.map((n, idx) => 
-                        params.startup_revenue * n
-                    );
-                    const startup_revenue_monthly = startup_revenue_monthly_pre_overhead.map((r, idx) => 
-                        r * (1 - institute_overhead_rate) * inflation_adjustments[idx]
-                    );
+
+const startup_revenue_monthly_pre_overhead = studies_started.map((n, idx) => 
+    params.startup_revenue * n * inflation_adjustments[idx]  // Apply inflation first
+);
+const startup_revenue_monthly = startup_revenue_monthly_pre_overhead.map(r => 
+    r * (1 - institute_overhead_rate)  // Then take overhead cut
+);
                     const startup_costs_monthly = studies_started.map((n, idx) => 
                         adjusted_startup_cost * n * inflation_adjustments[idx]
                     );
 
                     // Closeout revenue and costs
                     const closeout_revenue_monthly_pre_overhead = studies_completed_this_month.map((n, idx) => 
-                        params.closeout_revenue * n
-                    );
-                    const closeout_revenue_monthly = closeout_revenue_monthly_pre_overhead.map((r, idx) => 
-                        r * (1 - institute_overhead_rate) * inflation_adjustments[idx]
-                    );
+    params.closeout_revenue * n * inflation_adjustments[idx]  // Apply inflation first
+);
+const closeout_revenue_monthly = closeout_revenue_monthly_pre_overhead.map(r => 
+    r * (1 - institute_overhead_rate)  // Then take overhead cut
+);
+
                     const closeout_costs_monthly = studies_completed_this_month.map((n, idx) => 
                         adjusted_closeout_cost * n * inflation_adjustments[idx]
                     );
 
                     // Trial revenue
                     const trial_revenue_monthly_pre_overhead = active_studies.map((s, idx) => 
-                        params.per_patient_payment * adjusted_recruitment_rate * s
-                    );
-                    const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map((r, idx) => 
-                        r * (1 - institute_overhead_rate) * inflation_adjustments[idx]
-                    );
+    params.per_patient_payment * adjusted_recruitment_rate * s * inflation_adjustments[idx]  // Apply inflation first
+);
+const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r => 
+    r * (1 - institute_overhead_rate)  // Then take overhead cut
+);
 
                     // Per-patient expenses
                     const total_patients_recruited = active_studies.map((s, idx) => 
