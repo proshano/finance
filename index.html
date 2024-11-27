@@ -253,7 +253,7 @@
                     <!-- Navigation Tabs -->
                     <ul class="nav nav-tabs" id="resultTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="outputs-tab" data-toggle="tab" href="#outputs" role="tab" aria-controls="outputs" aria-selected="true">Outputs</a>
+                            <a class="nav-link" id="key-metrics-tab" data-toggle="tab" href="#key-metrics" role="tab" aria-controls="key-metrics" aria-selected="false">Summary</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" id="cash-flow-tab" data-toggle="tab" href="#cash-flow" role="tab" aria-controls="cash-flow" aria-selected="false">Cash Flow Plot</a>
@@ -264,8 +264,7 @@
                         <li class="nav-item">
                             <a class="nav-link" id="staff-costs-tab" data-toggle="tab" href="#staff-costs" role="tab" aria-controls="staff-costs" aria-selected="false">Staff Costs Plot</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="key-metrics-tab" data-toggle="tab" href="#key-metrics" role="tab" aria-controls="key-metrics" aria-selected="false">Key Metrics</a>
+                       
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" id="explanations-tab" data-toggle="tab" href="#explanations" role="tab" aria-controls="explanations" aria-selected="false">Explanations</a>
@@ -275,45 +274,7 @@
                     <!-- Tab Content -->
                     <div class="tab-content" id="resultTabsContent">
                         <!-- Outputs Tab -->
-                        <div class="tab-pane fade show active" id="outputs" role="tabpanel" aria-labelledby="outputs-tab">
-                            <div class="row mt-3">
-                                <div class="col-md-6">
-                                    <div class="metric-card">
-                                        <h4>Total Revenue</h4>
-                                        <p id="total_revenue_output"></p>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="metric-card">
-                                        <h4>Net Profit</h4>
-                                        <p id="net_profit_output"></p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="metric-card">
-                                        <h4>Net Present Value (NPV)</h4>
-                                        <p id="npv_output"></p>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="metric-card">
-                                        <h4>Internal Rate of Return (IRR)</h4>
-                                        <p id="irr_output"></p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="metric-card">
-                                        <h4>Total Patients Recruited</h4>
-                                        <p id="total_patients_output"></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
+                       
                         <!-- Cash Flow Plot Tab -->
                         <div class="tab-pane fade" id="cash-flow" role="tabpanel" aria-labelledby="cash-flow-tab">
                             <h4 class="mt-3">Cash Flow Over Time</h4>
@@ -390,8 +351,8 @@
                                     <li><strong>Total Revenue:</strong> Sum of startup revenue, trial revenue, and closeout revenue, adjusted for institute overhead and inflation.</li>
                                     <li><strong>Total Costs:</strong> Includes startup costs, fixed costs, staff costs (including benefits and severance accrual), per-patient expenses, and closeout costs, adjusted for inflation.</li>
                                     <li><strong>Net Profit:</strong> Calculated as Total Revenue minus Total Costs.</li>
-                                    <li><strong>NPV (Net Present Value):</strong> Present value of future net cash flows discounted at the discount rate.</li>
-                                    <li><strong>IRR (Internal Rate of Return):</strong> The discount rate at which the NPV of future cash flows is zero.</li>
+                                    <li><strong>Net Present Value:</strong> Present value of future net cash flows discounted at the discount rate with initial investment subtracted.</li>
+                                    <li><strong>Internal Rate of Return:</strong> The discount rate at which the net present value of future cash flows is zero. Useful for comparing investment opportunities. Higher is better.</li>
                                 </ul>
                                 <p><strong>Staffing Constraints:</strong></p>
                                 <ul>
@@ -768,15 +729,15 @@
                 // Function to render metrics table
                 function renderMetricsTable(fin) {
                     let metrics = [
-                        ['Total Revenue', formatCurrency(fin.total_revenue)],
+                    ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()],
+                    ['Total Revenue', formatCurrency(fin.total_revenue)],
                         ['Total Costs', formatCurrency(fin.total_costs)],
                         ['Net Profit', formatCurrency(fin.net_profit)],
-                        ['Net Present Value (NPV)', formatCurrency(fin.npv)],
-                        ['Internal Rate of Return (IRR)', fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'],
+                        ['Net Present Value', formatCurrency(fin.npv)],
+                        ['Internal Rate of Return', fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'],
                         ['Total Overhead Deducted', formatCurrency(fin.institute_overhead_monthly.reduce((a, b) => a + b, 0))],
-                        ['Total RA Spend', formatCurrency(fin.total_ra_spend)],
-                        ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)],
-                        ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()]
+                        ['Total Research Assistant Spend', formatCurrency(fin.total_ra_spend)],
+                        ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)]
                     ];
 
                     let table = `
@@ -851,7 +812,7 @@
                 }
 
                 // Initialize the first tab as active
-                $('.nav-tabs a[href="#outputs"]').tab('show');
+                $('.nav-tabs a[href="#key-metrics"]').tab('show');
             });
         </script>
     </body>
