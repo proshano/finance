@@ -713,9 +713,9 @@ function renderMetricsTable(fin, params) {
         .length * (params.new_studies_per_year / 12);
 
     let metrics = [
-        ['Total Studies Started', Math.round(total_studies_started).toLocaleString()],
+    ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()],
+    ['Total Studies Started', Math.round(total_studies_started).toLocaleString()],
         ['Total Studies Completed', Math.round(total_studies_closed).toLocaleString()],
-        ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()],
         ['Total Revenue', formatCurrency(fin.total_revenue)],
         ['Total Costs', formatCurrency(fin.total_costs)],
         ['Net Profit', formatCurrency(fin.net_profit)],
