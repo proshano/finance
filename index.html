@@ -158,7 +158,7 @@
                     <div class="form-group">
                         <label for="patients_per_month">Monthly Recruitment Rate per Study (patients):</label>
                         <input type="range" class="form-control-range slider" id="patients_per_month" min="0" max="5" value="0.3" step="0.1">
-                        <span id="patients_per_month">0.3</span>
+                        <span id="patients_per_month_value">0.3</span>
                     </div>
 
                     <!-- Financial Parameters -->
@@ -412,21 +412,21 @@
             $(document).ready(function () {
                 // Update slider values on input
                 $('.slider').on('input', function () {
-                    let id = $(this).attr('id');
-                    let value = parseFloat($(this).val());
-                    let display = '';
+    let id = $(this).attr('id');
+    let value = parseFloat($(this).val());
+    let display = '';
 
-                    // Determine how to format the display based on slider ID
-                    if (id.includes('rate') || id.includes('overhead') || id.includes('benefits') || id.includes('severance') || id.includes('variability')) {
-                        display = value + '%';
-                    } else if (id.includes('salary') || id.includes('cost') || id.includes('revenue') || id.includes('payment') || id.includes('expense')) {
-                        display = '$' + Number(value).toLocaleString();
-                    } else {
-                        display = value;
-                    }
+    // Determine how to format the display based on slider ID
+    if (id.includes('rate') || id.includes('overhead') || id.includes('benefits') || id.includes('severance') || id.includes('variability')) {
+        display = value + '%';
+    } else if (id.includes('salary') || id.includes('cost') || id.includes('revenue') || id.includes('payment') || id.includes('expense')) {
+        display = '$' + Number(value).toLocaleString();
+    } else {
+        display = value;
+    }
 
-                    $('#' + id + '_value').text(display);
-                });
+    $('#' + id + '_value').text(display);
+});
 
                 // Trigger input event to initialize display values
                 $('.slider').each(function () {
@@ -813,8 +813,7 @@
                         study_duration: parseFloat($('#study_duration').val()),
                         per_patient_payment: parseFloat($('#per_patient_payment').val()),
                         per_patient_expense: parseFloat($('#per_patient_expense').val()),
-                        monthly_recruitment_rate: parseFloat($('#monthly_recruitment_rate').val()),
-
+                        patients_per_month: parseFloat($('#patients_per_month').val()),
                         inflation_rate: parseFloat($('#inflation_rate').val()),
                         fixed_costs: parseFloat($('#fixed_costs').val()),
                         discount_rate: parseFloat($('#discount_rate').val()),
