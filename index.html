@@ -222,7 +222,7 @@
             <input type="range" class="form-control-range slider" id="per_patient_expense" min="0" max="20000" value="10000" step="500">
         </div>
         <div class="form-group">
-            <label for="patients_per_month">Monthly recruitment rate
+            <label for="patients_per_month">Patients recruited per study per month
                 <span id="patients_per_month_value" class="value-display">0.3</span>
             </label>
             <input type="range" class="form-control-range slider" id="patients_per_month" min="0" max="5" value="0.3" step="0.1">
@@ -243,12 +243,6 @@
             <input type="range" class="form-control-range slider" id="fixed_costs" min="0" max="50000" value="0" step="1000">
         </div>
         <div class="form-group">
-            <label for="discount_rate">Discount rate
-                <span id="discount_rate_value" class="value-display">0%</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="discount_rate" min="0" max="20" value="0" step="1">
-        </div>
-        <div class="form-group">
             <label for="institute_overhead">Institutional overhead
                 <span id="institute_overhead_value" class="value-display">30%</span>
             </label>
@@ -258,7 +252,7 @@
         <!-- Staffing Parameters Section -->
         <div class="section-header">Staffing Parameters</div>
         <div class="form-group">
-            <label for="ra_salary">Monthly RA salary
+            <label for="ra_salary">Monthly research assistant salary
                 <span id="ra_salary_value" class="value-display">$4,000</span>
             </label>
             <input type="range" class="form-control-range slider" id="ra_salary" min="0" max="10000" value="4000" step="500">
@@ -270,7 +264,7 @@
             <input type="range" class="form-control-range slider" id="coordinator_salary" min="0" max="15000" value="5500" step="500">
         </div>
         <div class="form-group">
-            <label for="studies_per_ra">Number of studies per RA
+            <label for="studies_per_ra">Number of studies per research assistant
                 <span id="studies_per_ra_value" class="value-display">5</span>
             </label>
             <input type="range" class="form-control-range slider" id="studies_per_ra" min="1" max="10" value="5" step="0.5">
@@ -288,13 +282,13 @@
             <input type="range" class="form-control-range slider" id="annual_raise" min="0" max="10" value="2" step="0.5">
         </div>
         <div class="form-group">
-            <label for="benefits_rate">Benefits rate
+            <label for="benefits_rate">Benefits rate (% of salary)
                 <span id="benefits_rate_value" class="value-display">30%</span>
             </label>
             <input type="range" class="form-control-range slider" id="benefits_rate" min="0" max="50" value="30" step="1">
         </div>
         <div class="form-group">
-            <label for="severance_rate">Severance accrual rate
+            <label for="severance_rate">Severance accrual rate (% of salary)
                 <span id="severance_rate_value" class="value-display">5%</span>
             </label>
             <input type="range" class="form-control-range slider" id="severance_rate" min="0" max="20" value="5" step="0.5">
@@ -391,7 +385,6 @@
                 <ul>
                     <li><strong>Inflation rate (%):</strong> The expected annual inflation rate.</li>
                     <li><strong>Fixed costs ($):</strong> Monthly fixed costs such as rent and utilities.</li>
-                    <li><strong>Discount rate (%):</strong> The rate used for discounting future cash flows.</li>
                     <li><strong>Institute overhead (%):</strong> The percentage of revenue taken by the institute from the top-line study budget.</li>
                 </ul>
                 <p><strong>Staffing parameters:</strong></p>
@@ -414,8 +407,6 @@
                     <li><strong>Total revenue:</strong> Sum of startup revenue, trial revenue, and closeout revenue, adjusted for institute overhead and inflation.</li>
                     <li><strong>Total costs:</strong> Includes startup costs, fixed costs, staff costs (including benefits and severance accrual), per-patient expenses, and closeout costs, adjusted for inflation.</li>
                     <li><strong>Net profit:</strong> Calculated as total revenue minus total costs.</li>
-                    <li><strong>Net present value:</strong> Present value of future net cash flows discounted at the discount rate with initial investment subtracted.</li>
-                    <li><strong>Internal rate of return:</strong> The discount rate at which the net present value of future cash flows is zero. Useful for comparing investment opportunities. Higher is better.</li>
                 </ul>
                 <p><strong>Staffing constraints:</strong></p>
                 <ul>
@@ -478,12 +469,6 @@
     return Math.pow(1 + annualRate / 100, 1/12) - 1;
 }
 
-function calculateNPV(cashFlows, annualDiscountRate) {
-    const monthlyRate = calculateEffectiveMonthlyRate(annualDiscountRate);
-    return cashFlows.reduce((acc, cf, i) => 
-        acc + cf / Math.pow(1 + monthlyRate, i), 0
-    );
-}
 
                 // Function to perform calculations
                 function calculateFinancials(params) {
@@ -660,15 +645,10 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
                         return acc;
                     }, 0);
 
-                    // Cash flows for NPV and IRR calculation
+                    // Cash flows that could be used for NPV and IRR calculation (which i decided to remove)
                     const initial_investment = - (startup_costs_monthly[0] + fixed_costs_monthly[0] + staff_costs_monthly[0] + severance_cost_monthly[0] + per_patient_expenses_monthly[0] + closeout_costs_monthly[0]);
                     const cash_flows = [initial_investment, ...net_profit_monthly];
 
-                    // NPV calculations
-                    const npv = calculateNPV(cash_flows, params.discount_rate);
-
-                    // IRR calculation
-                    const irr = calculateIRR(cash_flows);
 
                     // Total patients recruited
                     const total_patients = total_patients_recruited.reduce((a, b) => a + b, 0);
@@ -685,8 +665,6 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
     total_revenue: total_revenue_monthly.reduce((a, b) => a + b, 0),
     total_costs: total_costs_monthly.reduce((a, b) => a + b, 0),
     net_profit: net_profit_monthly.reduce((a, b) => a + b, 0),
-    npv: npv,
-    irr: irr,
     total_revenue_monthly: total_revenue_monthly,
     total_costs_monthly: total_costs_monthly,
     staff_costs_monthly: staff_costs_monthly,
@@ -706,53 +684,7 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
 };
                 }
 
-                // IRR calculation function using Newton-Raphson method
-                function calculateIRR(cashFlows) {
-    let guess = 0.1; // Initial guess (10%)
-    const maxIterations = 1000;
-    const tolerance = 1e-10;
-
-    function npvAtRate(rate) {
-        const monthlyRate = calculateEffectiveMonthlyRate(rate);
-        return cashFlows.reduce((acc, cf, i) => 
-            acc + cf / Math.pow(1 + monthlyRate, i), 0
-        );
-    }
-
-    function derivativeAtRate(rate) {
-        const monthlyRate = calculateEffectiveMonthlyRate(rate);
-        return cashFlows.reduce((acc, cf, i) => 
-            acc - (i * cf) / Math.pow(1 + monthlyRate, i + 1), 0
-        );
-    }
-
-    // Newton-Raphson iteration
-    for (let i = 0; i < maxIterations; i++) {
-        const npv = npvAtRate(guess);
-        const derivative = derivativeAtRate(guess);
-        
-        // Avoid division by zero
-        if (Math.abs(derivative) < 1e-10) {
-            return null;
-        }
-
-        const nextGuess = guess - npv / derivative;
-        
-        // Check for convergence
-        if (Math.abs(nextGuess - guess) < tolerance) {
-            return nextGuess;
-        }
-
-        // Check for invalid results
-        if (isNaN(nextGuess) || !isFinite(nextGuess)) {
-            return null;
-        }
-
-        guess = nextGuess;
-    }
-
-    return null; // Return null if no convergence
-}
+            
 
                 // Function to render the cash flow plot
                 function renderCashFlowPlot(fin) {
@@ -967,8 +899,6 @@ function renderYearlyBreakdownTable(fin, params) {
         ['Total Revenue', formatCurrency(fin.total_revenue)],
         ['Total Costs', formatCurrency(fin.total_costs)],
         ['Net Profit', formatCurrency(fin.net_profit)],
-        ['Net Present Value', formatCurrency(fin.npv)],
-        ['Internal Rate of Return', fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'],
         ['Total Overhead Deducted', formatCurrency(fin.institute_overhead_monthly.reduce((a, b) => a + b, 0))],
         ['Total Research Assistant Spend', formatCurrency(fin.total_ra_spend)],
         ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)],
@@ -1012,7 +942,6 @@ function renderYearlyBreakdownTable(fin, params) {
         patients_per_month: parseFloat($('#patients_per_month').val()),
         inflation_rate: parseFloat($('#inflation_rate').val()),
         fixed_costs: parseFloat($('#fixed_costs').val()),
-        discount_rate: parseFloat($('#discount_rate').val()),
         institute_overhead: parseFloat($('#institute_overhead').val()),
 
         ra_salary: parseFloat($('#ra_salary').val()),
@@ -1038,8 +967,6 @@ function renderYearlyBreakdownTable(fin, params) {
     $('#yearly_breakdown_table').html(renderYearlyBreakdownTable(fin, params));
     $('#total_revenue_output').text(`Total Revenue over ${params.total_months} months: ${formatCurrency(fin.total_revenue)}`);
     $('#net_profit_output').text(`Net Profit over ${params.total_months} months: ${formatCurrency(fin.net_profit)}`);
-    $('#npv_output').text(`Net Present Value (NPV): ${formatCurrency(fin.npv)}`);
-    $('#irr_output').text(`Internal Rate of Return (IRR): ${fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'}`);
     $('#total_patients_output').text(`Total Patients Recruited over ${params.total_months} months: ${Math.round(fin.total_patients_recruited).toLocaleString()}`);
 
     // Render plots and tables
