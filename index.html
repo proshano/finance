@@ -244,6 +244,9 @@
                             <a class="nav-link" id="key-metrics-tab" data-toggle="tab" href="#key-metrics" role="tab" aria-controls="key-metrics" aria-selected="false">Summary</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" id="yearly-breakdown-tab" data-toggle="tab" href="#yearly-breakdown" role="tab" aria-controls="yearly-breakdown" aria-selected="false">Yearly Breakdown</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" id="cash-flow-tab" data-toggle="tab" href="#cash-flow" role="tab" aria-controls="cash-flow" aria-selected="false">Cash Flow Plot</a>
                         </li>
                         <li class="nav-item">
@@ -262,7 +265,10 @@
                     <!-- Tab Content -->
                     <div class="tab-content" id="resultTabsContent">
                         <!-- Outputs Tab -->
-                       
+                        <div class="tab-pane fade" id="yearly-breakdown" role="tabpanel" aria-labelledby="yearly-breakdown-tab">
+                            <h4 class="mt-3">Yearly Financial Breakdown</h4>
+                            <div id="yearly_breakdown_table"></div>
+                        </div>
                         <!-- Cash Flow Plot Tab -->
                         <div class="tab-pane fade" id="cash-flow" role="tabpanel" aria-labelledby="cash-flow-tab">
                             <h4 class="mt-3">Cash Flow Over Time</h4>
@@ -712,7 +718,111 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
                     };
                     Plotly.newPlot('staffing_levels_plot', data, layout, {responsive: true});
                 }
+// Function to aggregate monthly data into yearly summaries
+// Function to aggregate monthly data into yearly summaries
+function calculateYearlyBreakdown(fin, params) {
+    const years = Math.ceil(params.total_months / 12);
+    const yearlyData = [];
+    let cumulativeProfit = 0;
+    
+    for (let year = 0; year < years; year++) {
+        const startMonth = year * 12;
+        const endMonth = Math.min((year + 1) * 12, params.total_months);
+        
+        // Initialize yearly totals
+        const yearData = {
+            year: year + 1,
+            revenue: {
+                total: 0
+            },
+            costs: {
+                staff: 0,
+                other: 0,
+                total: 0
+            },
+            metrics: {
+                activeStudies: 0,
+                avgRAs: 0,
+                avgCoordinators: 0
+            },
+            profit: 0,
+            cumulativeProfit: 0
+        };
+        
+        // Sum up monthly values for the year
+        for (let month = startMonth; month < endMonth; month++) {
+            yearData.revenue.total += fin.total_revenue_monthly[month];
+            yearData.costs.staff += fin.staff_costs_monthly[month];
+            yearData.costs.total += fin.total_costs_monthly[month];
+            yearData.metrics.avgRAs += fin.num_ras_employed[month];
+            yearData.metrics.avgCoordinators += fin.num_coordinators_employed[month];
+        }
+        
+        // Get end-of-year active studies count
+        yearData.metrics.activeStudies = Math.round(fin.active_studies[endMonth - 1]);
+        
+        // Calculate averages for other metrics
+        const monthsInYear = endMonth - startMonth;
+        yearData.metrics.avgRAs = Math.round(yearData.metrics.avgRAs / monthsInYear);
+        yearData.metrics.avgCoordinators = Math.round(yearData.metrics.avgCoordinators / monthsInYear);
+        yearData.costs.other = yearData.costs.total - yearData.costs.staff;
+        yearData.profit = yearData.revenue.total - yearData.costs.total;
+        
+        // Calculate cumulative profit
+        cumulativeProfit += yearData.profit;
+        yearData.cumulativeProfit = cumulativeProfit;
+        
+        yearlyData.push(yearData);
+    }
+    
+    return yearlyData;
+}
 
+// Function to render the yearly breakdown table
+function renderYearlyBreakdownTable(fin, params) {
+    const yearlyData = calculateYearlyBreakdown(fin, params);
+    
+    let tableHtml = `
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Revenue</th>
+                    <th>Staff Costs</th>
+                    <th>Other Costs</th>
+                    <th>Total Costs</th>
+                    <th>Profit</th>
+                    <th>Cumulative Profit</th>
+                    <th>Active Studies</th>
+                    <th>Staff (RA/Coord)</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    yearlyData.forEach(year => {
+        tableHtml += `
+            <tr>
+                <td>${year.year}</td>
+                <td>${formatCurrency(year.revenue.total)}</td>
+                <td>${formatCurrency(year.costs.staff)}</td>
+                <td>${formatCurrency(year.costs.other)}</td>
+                <td>${formatCurrency(year.costs.total)}</td>
+                <td class="${year.profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(year.profit)}</td>
+                <td class="${year.cumulativeProfit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(year.cumulativeProfit)}</td>
+                <td>${year.metrics.activeStudies}</td>
+                <td>${year.metrics.avgRAs}/${year.metrics.avgCoordinators}</td>
+            </tr>
+        `;
+    });
+    
+    tableHtml += `
+            </tbody>
+        </table>
+    `;
+    
+    return tableHtml;
+}
                 // Function to render staff costs plot
                 function renderStaffCostsPlot(fin) {
                     let data = [
@@ -822,6 +932,7 @@ function renderMetricsTable(fin, params) {
     $('#forecast-title').text(params.total_months + ' month forecast');
     
     // Rest of the output updates...
+    $('#yearly_breakdown_table').html(renderYearlyBreakdownTable(fin, params));
     $('#total_revenue_output').text(`Total Revenue over ${params.total_months} months: ${formatCurrency(fin.total_revenue)}`);
     $('#net_profit_output').text(`Net Profit over ${params.total_months} months: ${formatCurrency(fin.net_profit)}`);
     $('#npv_output').text(`Net Present Value (NPV): ${formatCurrency(fin.npv)}`);
