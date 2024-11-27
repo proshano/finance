@@ -1,378 +1,437 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Pavel's Finance Simulator</title>
-    <!-- Include Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <!-- Include Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <!-- Include Bootstrap JS (required for tabs) -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <!-- Custom CSS -->
+    
     <style>
+        /* Base styles */
         html, body {
             margin: 0;
             font-family: Arial, sans-serif;
+            height: 100%;
         }
-    
-        .container-fluid {
+        
+        /* Layout structure */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
             padding: 20px;
         }
-    
-        #sidebar {
-            background-color: #f8f9fa;
+        
+        /* Header styles */
+        .header {
             padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
         }
-    
+        
+        .last-updated {
+            color: #666;
+            font-size: 0.8em;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        /* Sidebar styles */
+        .sidebar-container {
+    width: 400px;     /* Increased from 300px to give more room */
+    flex-shrink: 0;
+    margin-right: 30px;  /* Slightly increased margin for better spacing */
+}
+
+#sidebar {
+    background-color: #f8f9fa;
+    padding: 20px;    /* Increased padding for better visual spacing */
+    border-radius: 8px;
+    position: static;  /* Changed from sticky to static */
+    height: auto;     /* Let it take natural height */
+    overflow-y: visible; /* Remove scrolling */
+}
+
+        /* Main content styles */
+        .main-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Form elements */
+        .section-header {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin: 8px 0 4px 0;
+            padding-top: 4px;
+            border-top: 1px solid #ddd;
+            color: #2c3e50;
+        }
+
+        .form-group {
+            margin-bottom: 2px;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            margin-bottom: 2px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .value-display {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
         .slider {
             width: 100%;
+            margin: 2px 0;
+            padding: 0;
+            height: 1rem;
         }
-    
-        .form-group {
-            margin-bottom: 20px;
-        }
-    
-        #dashboard {
-            padding: 20px;
-            position: sticky;
-            top: 20px;
-        }
-    
-        #metrics_table table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-    
-        #metrics_table th, #metrics_table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-    
-        #metrics_table tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-    
-        #metrics_table th {
-            background-color: #4CAF50;
-            color: white;
-        }
-    
-        #explanations {
-            margin-top: 20px;
-        }
-    
-        #explanations h5 {
-            font-weight: bold;
-        }
-    
-        #explanations ul {
-            list-style-type: disc;
-            padding-left: 20px;
-        }
-    
+
+        /* Plot container */
         .plot-container {
             height: 400px;
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
         }
-    
-        .plot-container-large {
-            height: 500px;
+
+        /* Utility classes */
+        .btn-primary {
+            margin-top: 8px;
+            padding: 4px 8px;
+            font-size: 0.9rem;
         }
-    
-        .full-height-row {
-            margin: 0;
+
+        .custom-control-label {
+            font-size: 0.8rem;
         }
-    
-        .metric-card {
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+        .custom-control {
+            margin-bottom: 4px;
+        }
+
+        small.form-text {
+            font-size: 0.7rem;
+            margin-top: 2px;
+            color: #888;
+        }
+
+        /* Component-specific styles */
+        h3 {
+            font-size: 1rem;
+            margin: 8px 0 4px 0;
+            padding-bottom: 4px;
+        }
+
+        input[type="range"] {
+            margin: 2px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <h1 class="mt-4">Pavel's Financial Simulator for New Trial Units</h1>
-        <div class="row full-height-row">
-            <!-- Sidebar -->
-            <div class="col-md-3">
-                <div id="sidebar">
-                                        <!-- Simulation Parameters -->
-                                        <h3>Simulation Parameters</h3>
-                                        <div class="form-group">
-                                            <label for="total_months">Total simulation duration (months):</label>
-                                            <input type="range" class="form-control-range slider" id="total_months" min="12" max="60" value="60" step="1">
-                                            <span id="total_months_value">60</span>
-                                        </div>
-                    
-                                        <button id="calculate" class="btn btn-primary mb-3">Run Simulation</button>
-                                        
-                    <!-- Startup and Closeout Parameters -->
-                    <h3>Startup and Closeout Parameters</h3>
-                    <div class="form-group">
-                        <label for="startup_revenue">Revenue per startup ($):</label>
-                        <input type="range" class="form-control-range slider" id="startup_revenue" min="0" max="10000" value="4000" step="500">
-                        <span id="startup_revenue_value">$4,000</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="startup_cost">Cost per startup ($):</label>
-                        <input type="range" class="form-control-range slider" id="startup_cost" min="0" max="10000" value="3500" step="500">
-                        <span id="startup_cost_value">$3,500</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="closeout_revenue">Revenue per closeout ($):</label>
-                        <input type="range" class="form-control-range slider" id="closeout_revenue" min="0" max="10000" value="4000" step="500">
-                        <span id="closeout_revenue_value">$4,000</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="closeout_cost">Cost per closeout ($):</label>
-                        <input type="range" class="form-control-range slider" id="closeout_cost" min="0" max="10000" value="3500" step="500">
-                        <span id="closeout_cost_value">$3,500</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="new_studies_per_year">New studies per year:</label>
-                        <input type="range" class="form-control-range slider" id="new_studies_per_year" min="1" max="20" value="4" step="1">
-                        <span id="new_studies_per_year_value">4</span>
-                    </div>
-
-                    <!-- Trial Parameters -->
-                    <h3>Trial Parameters</h3>
-                    <div class="form-group">
-                        <label for="study_duration">Study duration (months):</label>
-                        <input type="range" class="form-control-range slider" id="study_duration" min="1" max="60" value="24" step="1">
-                        <span id="study_duration_value">24</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="per_patient_payment">Per patient payment ($):</label>
-                        <input type="range" class="form-control-range slider" id="per_patient_payment" min="0" max="50000" value="30000" step="1000">
-                        <span id="per_patient_payment_value">$30,000</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="per_patient_expense">Per patient expense, non-staff ($):</label>
-                        <input type="range" class="form-control-range slider" id="per_patient_expense" min="0" max="20000" value="10000" step="500">
-                        <span id="per_patient_expense_value">$10,000</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="patients_per_month">Monthly recruitment rate per study (patients):</label>
-                        <input type="range" class="form-control-range slider" id="patients_per_month" min="0" max="5" value="0.3" step="0.1">
-                        <span id="patients_per_month_value">0.3</span>
-                    </div>
-
-                    <!-- Financial Parameters -->
-                    <h3>Financial Parameters</h3>
-                    <div class="form-group">
-                        <label for="inflation_rate">Annual inflation rate (%):</label>
-                        <input type="range" class="form-control-range slider" id="inflation_rate" min="0" max="10" value="3" step="0.5">
-                        <span id="inflation_rate_value">3%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="fixed_costs">Monthly fixed costs ($):</label>
-                        <input type="range" class="form-control-range slider" id="fixed_costs" min="0" max="50000" value="0" step="1000">
-                        <span id="fixed_costs_value">$0</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="discount_rate">Discount rate (%):</label>
-                        <input type="range" class="form-control-range slider" id="discount_rate" min="0" max="20" value="0" step="1">
-                        <span id="discount_rate_value">0%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="institute_overhead">Institutional overhead (%):</label>
-                        <input type="range" class="form-control-range slider" id="institute_overhead" min="0" max="50" value="30" step="1">
-                        <span id="institute_overhead_value">30%</span>
-                    </div>
-
-                    <!-- Staffing Parameters -->
-                    <h3>Staffing Parameters</h3>
-                    <p class="text-muted mb-3" style="font-size: 0.9em;">Each clinical trial requires support from both Research Assistants (RAs) and Study Coordinators. RAs handle day-to-day study operations and data collection, while Coordinators manage regulatory compliance and overall study coordination. The parameters below determine staffing levels and associated costs.</p>
-
-                    <div class="form-group">
-                        <label for="ra_salary">Base monthly salary per RA ($):</label>
-                        <input type="range" class="form-control-range slider" id="ra_salary" min="0" max="10000" value="4000" step="500">
-                        <span id="ra_salary_value">$4,000</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="coordinator_salary">Base monthly salary per coordinator ($):</label>
-                        <input type="range" class="form-control-range slider" id="coordinator_salary" min="0" max="15000" value="5500" step="500">
-                        <span id="coordinator_salary_value">$5,500</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="annual_raise">Annual raise above inflation (%):</label>
-                        <input type="range" class="form-control-range slider" id="annual_raise" min="0" max="10" value="2" step="0.5">
-                        <span id="annual_raise_value">2%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="studies_per_ra">Average number of studies that an RA can support:</label>
-                        <input type="range" class="form-control-range slider" id="studies_per_ra" min="1" max="10" value="5" step="0.5">
-                        <span id="studies_per_ra_value">5</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="studies_per_coordinator">Average number of studies that a coordinator can support:</label>
-                        <input type="range" class="form-control-range slider" id="studies_per_coordinator" min="1" max="15" value="10" step="0.5">
-                        <span id="studies_per_coordinator_value">10</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="benefits_rate">Staff benefits rate (% of salary):</label>
-                        <input type="range" class="form-control-range slider" id="benefits_rate" min="0" max="50" value="30" step="1">
-                        <span id="benefits_rate_value">30%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="severance_rate">Severance accrual rate (% of salary):</label>
-                        <input type="range" class="form-control-range slider" id="severance_rate" min="0" max="20" value="5" step="0.5">
-                        <span id="severance_rate_value">5%</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="admin_premium">Base annual administrative premium per staff member ($):</label>
-                        <input type="range" class="form-control-range slider" id="admin_premium" min="0" max="10000" value="5000" step="500">
-                        <span id="admin_premium_value">$5,000</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="allow_fractional_staff">Allow Fractional Staff:</label>
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="allow_fractional_staff">
-                            <label class="custom-control-label" for="allow_fractional_staff">Enable fractional staff hiring</label>
-                        </div>
-                        <small class="form-text text-muted">When enabled, staff can be hired in fractional amounts (e.g., 0.5 FTE) depending on the number of active studies, as in a shared staffing model. The default is hiring whole staff only.</small>
-                    </div>
-                    
-
-                </div>
-            </div>
-
-            <!-- Main Content with Tabs -->
-            <div class="col-md-9">
-                <div id="dashboard">
-                    <!-- Navigation Tabs -->
-                    <ul class="nav nav-tabs" id="resultTabs" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link" id="key-metrics-tab" data-toggle="tab" href="#key-metrics" role="tab" aria-controls="key-metrics" aria-selected="false">Summary</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="yearly-breakdown-tab" data-toggle="tab" href="#yearly-breakdown" role="tab" aria-controls="yearly-breakdown" aria-selected="false">Yearly Breakdown</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="cash-flow-tab" data-toggle="tab" href="#cash-flow" role="tab" aria-controls="cash-flow" aria-selected="false">Cash Flow Plot</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="staffing-levels-tab" data-toggle="tab" href="#staffing-levels" role="tab" aria-controls="staffing-levels" aria-selected="false">Staffing Levels Plot</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="staff-costs-tab" data-toggle="tab" href="#staff-costs" role="tab" aria-controls="staff-costs" aria-selected="false">Staff Costs Plot</a>
-                        </li>
-                       
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="explanations-tab" data-toggle="tab" href="#explanations" role="tab" aria-controls="explanations" aria-selected="false">Explanations</a>
-                        </li>
-                    </ul>
-
-                    <!-- Tab Content -->
-                    <div class="tab-content" id="resultTabsContent">
-                        <!-- Outputs Tab -->
-                        <div class="tab-pane fade" id="yearly-breakdown" role="tabpanel" aria-labelledby="yearly-breakdown-tab">
-                            <h4 class="mt-3">End-of-Year Reports</h4>
-                            <div id="yearly_breakdown_table"></div>
-                        </div>
-                        <!-- Cash Flow Plot Tab -->
-                        <div class="tab-pane fade" id="cash-flow" role="tabpanel" aria-labelledby="cash-flow-tab">
-                            <h4 class="mt-3">Cash Flow Over Time</h4>
-                            <div id="cash_flow_plot" class="plot-container"></div>
-                        </div>
-
-                        <!-- Staffing Levels Plot Tab -->
-                        <div class="tab-pane fade" id="staffing-levels" role="tabpanel" aria-labelledby="staffing-levels-tab">
-                            <h4 class="mt-3">Staffing Levels Over Time</h4>
-                            <div id="staffing_levels_plot" class="plot-container"></div>
-                        </div>
-
-                        <!-- Staff Costs Plot Tab -->
-                        <div class="tab-pane fade" id="staff-costs" role="tabpanel" aria-labelledby="staff-costs-tab">
-                            <h4 class="mt-3">Staff Costs Over Time</h4>
-                            <div id="staff_costs_plot" class="plot-container"></div>
-                        </div>
-
-                        <!-- Key Metrics Tab -->
-                        <div class="tab-pane fade" id="key-metrics" role="tabpanel" aria-labelledby="key-metrics-tab">
-                            <h4 class="mt-3"><span id="forecast-title"></span></h4>
-                            <div id="metrics_table"></div>
-                        </div>
-                        
-
-                        <!-- Explanations Tab -->
-                        <div class="tab-pane fade" id="explanations" role="tabpanel" aria-labelledby="explanations-tab">
-                            <h4 class="mt-3">Explanations</h4>
-                            <div id="explanations-content">
-                                <!-- Explanations Content -->
-                                <h5><strong>Explanation of inputs and calculations</strong></h5>
-                                <p><strong>Startup and closeout parameters:</strong></p>
-                                <ul>
-                                    <li><strong>Revenue per startup ($):</strong> The amount received for initiating a new study.</li>
-                                    <li><strong>Cost per startup ($):</strong> The cost incurred to start a new study.</li>
-                                    <li><strong>Revenue per closeout ($):</strong> The amount received when closing out a study.</li>
-                                    <li><strong>Cost per closeout ($):</strong> The cost incurred when closing out a study.</li>
-                                    <li><strong>New studies per year:</strong> The number of new studies started each year.</li>
-                                </ul>
-                                <p><strong>Trial parameters:</strong></p>
-                                <ul>
-                                    <li><strong>Study duration (months):</strong> The expected duration of each study.</li>
-                                    <li><strong>Per patient payment ($):</strong> The amount received for each patient enrolled in a study.</li>
-                                    <li><strong>Per patient expense ($):</strong> The cost incurred for each patient enrolled, excluding staff costs.</li>
-                                    <li><strong>Monthly recruitment rate per study (patients):</strong> The average number of patients recruited per study per month.</li>
-                                </ul>
-                                <p><strong>Financial parameters:</strong></p>
-                                <ul>
-                                    <li><strong>Inflation rate (%):</strong> The expected annual inflation rate.</li>
-                                    <li><strong>Fixed costs ($):</strong> Monthly fixed costs such as rent and utilities.</li>
-                                    <li><strong>Discount rate (%):</strong> The rate used for discounting future cash flows.</li>
-                                    <li><strong>Institute overhead (%):</strong> The percentage of revenue taken by the institute from the top-line study budget.</li>
-                                </ul>
-                                <p><strong>Staffing parameters:</strong></p>
-                                <ul>
-                                    <li><strong>Average number of studies that an RA can support:</strong> The typical number of concurrent studies that one research assistant can effectively manage.</li>
-                                    <li><strong>Average number of studies a coordinator can support:</strong> The typical number of concurrent studies that one coordinator can effectively manage.</li>
-                                    <li><strong>Base monthly salary per RA ($):</strong> The base salary for research assistants.</li>
-                                    <li><strong>Base monthly salary per coordinator ($):</strong> The base salary for coordinators.</li>
-                                    <li><strong>Annual raise (%):</strong> The annual salary increase percentage for staff beyond inflation.</li>
-                                    <li><strong>Staff benefits rate (% of salary):</strong> The percentage added to staff salaries to cover benefits.</li>
-                                    <li><strong>Severance accrual rate (% of salary):</strong> The percentage of salaries set aside monthly for severance costs.</li>
-                                    <li><strong>Administrative premium per staff member ($):</strong> Annual overhead cost per staff member to account for various realities of managing more poeple. Increases with inflation.</li>
-
-                                </ul>
-                                <p><strong>Simulation parameters:</strong></p>
-                                <ul>
-                                    <li><strong>Total simulation duration (months):</strong> The total time period over which the simulation runs.</li>
-                                </ul>
-                                <p><strong>Financial calculations:</strong></p>
-                                <ul>
-                                    <li><strong>Total revenue:</strong> Sum of startup revenue, trial revenue, and closeout revenue, adjusted for institute overhead and inflation.</li>
-                                    <li><strong>Total costs:</strong> Includes startup costs, fixed costs, staff costs (including benefits and severance accrual), per-patient expenses, and closeout costs, adjusted for inflation.</li>
-                                    <li><strong>Net profit:</strong> Calculated as total revenue minus total costs.</li>
-                                    <li><strong>Net present value:</strong> Present value of future net cash flows discounted at the discount rate with initial investment subtracted.</li>
-                                    <li><strong>Internal rate of return:</strong> The discount rate at which the net present value of future cash flows is zero. Useful for comparing investment opportunities. Higher is better.</li>
-                                </ul>
-                                <p><strong>Staffing constraints:</strong></p>
-                                <ul>
-                                    <li>Staff are hired in whole numbers (integer increments). Partial staff cannot be hired.</li>
-                                    <li>Once staff are hired, they remain employed. Staff numbers do not decrease even if workload decreases.</li>
-                                    <li>Staff costs are calculated based on the number of staff employed each month, adjusted for annual raises, benefits, and cost variability.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="app-container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1 class="mb-2" style="font-size: 1.5rem;">Pavel's Financial Simulator for New Trial Units</h1>
+            <div class="last-updated">Last Updated: November 27, 2024</div>
         </div>
 
+        <!-- Main Content Wrapper -->
+        <div class="content-wrapper">
+
+      
+<!-- Sidebar -->
+<div class="sidebar-container">
+    <div id="sidebar">
+        <!-- Main simulation control -->
+        <button id="calculate" class="btn btn-primary btn-sm w-100 mb-2">Run Simulation</button>
+
+        <!-- Simulation Duration Section -->
+        <div class="section-header">Simulation Duration</div>
+        <div class="form-group">
+            <label for="total_months">Total simulation months
+                <span id="total_months_value" class="value-display">60</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="total_months" min="12" max="60" value="60" step="1">
+        </div>
+
+        <!-- Startup and Closeout Section -->
+        <div class="section-header">Startup and Closeout</div>
+        <div class="form-group">
+            <label for="startup_revenue">Revenue per study initiation
+                <span id="startup_revenue_value" class="value-display">$4,000</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="startup_revenue" min="0" max="10000" value="4000" step="500">
+        </div>
+        <div class="form-group">
+            <label for="startup_cost">Cost per study initiation
+                <span id="startup_cost_value" class="value-display">$3,500</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="startup_cost" min="0" max="10000" value="3500" step="500">
+        </div>
+        <div class="form-group">
+            <label for="closeout_revenue">Revenue per study closeout
+                <span id="closeout_revenue_value" class="value-display">$4,000</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="closeout_revenue" min="0" max="10000" value="4000" step="500">
+        </div>
+        <div class="form-group">
+            <label for="closeout_cost">Cost per study closeout
+                <span id="closeout_cost_value" class="value-display">$3,500</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="closeout_cost" min="0" max="10000" value="3500" step="500">
+        </div>
+        <div class="form-group">
+            <label for="new_studies_per_year">New studies per year
+                <span id="new_studies_per_year_value" class="value-display">4</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="new_studies_per_year" min="1" max="20" value="4" step="1">
+        </div>
+
+        <!-- Trial Parameters Section -->
+        <div class="section-header">Trial Parameters</div>
+        <div class="form-group">
+            <label for="study_duration">Study duration (months)
+                <span id="study_duration_value" class="value-display">24</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="study_duration" min="1" max="60" value="24" step="1">
+        </div>
+        <div class="form-group">
+            <label for="per_patient_payment">Per patient payment
+                <span id="per_patient_payment_value" class="value-display">$30,000</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="per_patient_payment" min="0" max="50000" value="30000" step="1000">
+        </div>
+        <div class="form-group">
+            <label for="per_patient_expense">Per patient expense
+                <span id="per_patient_expense_value" class="value-display">$10,000</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="per_patient_expense" min="0" max="20000" value="10000" step="500">
+        </div>
+        <div class="form-group">
+            <label for="patients_per_month">Monthly recruitment rate
+                <span id="patients_per_month_value" class="value-display">0.3</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="patients_per_month" min="0" max="5" value="0.3" step="0.1">
+        </div>
+
+        <!-- Financial Parameters Section -->
+        <div class="section-header">Financial Parameters</div>
+        <div class="form-group">
+            <label for="inflation_rate">Annual inflation rate
+                <span id="inflation_rate_value" class="value-display">3%</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="inflation_rate" min="0" max="10" value="3" step="0.5">
+        </div>
+        <div class="form-group">
+            <label for="fixed_costs">Monthly fixed costs
+                <span id="fixed_costs_value" class="value-display">$0</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="fixed_costs" min="0" max="50000" value="0" step="1000">
+        </div>
+        <div class="form-group">
+            <label for="discount_rate">Discount rate
+                <span id="discount_rate_value" class="value-display">0%</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="discount_rate" min="0" max="20" value="0" step="1">
+        </div>
+        <div class="form-group">
+            <label for="institute_overhead">Institutional overhead
+                <span id="institute_overhead_value" class="value-display">30%</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="institute_overhead" min="0" max="50" value="30" step="1">
+        </div>
+
+        <!-- Staffing Parameters Section -->
+        <div class="section-header">Staffing Parameters</div>
+        <div class="form-group">
+            <label for="ra_salary">Monthly RA salary
+                <span id="ra_salary_value" class="value-display">$4,000</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="ra_salary" min="0" max="10000" value="4000" step="500">
+        </div>
+        <div class="form-group">
+            <label for="coordinator_salary">Monthly coordinator salary
+                <span id="coordinator_salary_value" class="value-display">$5,500</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="coordinator_salary" min="0" max="15000" value="5500" step="500">
+        </div>
+        <div class="form-group">
+            <label for="studies_per_ra">Studies per RA
+                <span id="studies_per_ra_value" class="value-display">5</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="studies_per_ra" min="1" max="10" value="5" step="0.5">
+        </div>
+        <div class="form-group">
+            <label for="studies_per_coordinator">Studies per coordinator
+                <span id="studies_per_coordinator_value" class="value-display">10</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="studies_per_coordinator" min="1" max="15" value="10" step="0.5">
+        </div>
+        <div class="form-group">
+            <label for="annual_raise">Annual raise
+                <span id="annual_raise_value" class="value-display">2%</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="annual_raise" min="0" max="10" value="2" step="0.5">
+        </div>
+        <div class="form-group">
+            <label for="benefits_rate">Benefits rate
+                <span id="benefits_rate_value" class="value-display">30%</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="benefits_rate" min="0" max="50" value="30" step="1">
+        </div>
+        <div class="form-group">
+            <label for="severance_rate">Severance rate
+                <span id="severance_rate_value" class="value-display">5%</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="severance_rate" min="0" max="20" value="5" step="0.5">
+        </div>
+        <div class="form-group">
+            <label for="admin_premium">Annual admin premium
+                <span id="admin_premium_value" class="value-display">$5,000</span>
+            </label>
+            <input type="range" class="form-control-range slider" id="admin_premium" min="0" max="10000" value="5000" step="500">
+        </div>
+        
+        <!-- Fractional Staff Toggle -->
+        <div class="form-group">
+            <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input" id="allow_fractional_staff">
+                <label class="custom-control-label" for="allow_fractional_staff">Enable fractional staff hiring</label>
+            </div>
+        </div>
+        <small class="form-text text-muted">When enabled, staff can be hired in fractional amounts (e.g., 0.5 FTE) depending on the number of active studies, as in a shared staffing model. The default is hiring whole staff only.</small>
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<div class="main-content">
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mb-3" id="resultTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="key-metrics-tab" data-toggle="tab" href="#key-metrics" role="tab">Summary</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="yearly-breakdown-tab" data-toggle="tab" href="#yearly-breakdown" role="tab">Yearly Breakdown</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="cash-flow-tab" data-toggle="tab" href="#cash-flow" role="tab">Cash Flow Plot</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="staffing-levels-tab" data-toggle="tab" href="#staffing-levels" role="tab">Staffing Levels Plot</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="staff-costs-tab" data-toggle="tab" href="#staff-costs" role="tab">Staff Costs Plot</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="explanations-tab" data-toggle="tab" href="#explanations" role="tab">Explanations</a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="resultTabsContent">
+        <div class="tab-pane fade show active" id="key-metrics" role="tabpanel">
+            <h4 class="mt-3"><span id="forecast-title"></span></h4>
+            <div id="metrics_table"></div>
+        </div>
+        
+        <div class="tab-pane fade" id="yearly-breakdown" role="tabpanel">
+            <h4 class="mt-3">End-of-Year Reports</h4>
+            <div id="yearly_breakdown_table"></div>
+        </div>
+        
+        <div class="tab-pane fade" id="cash-flow" role="tabpanel">
+            <h4 class="mt-3">Cash Flow Over Time</h4>
+            <div id="cash_flow_plot" class="plot-container"></div>
+        </div>
+        
+        <div class="tab-pane fade" id="staffing-levels" role="tabpanel">
+            <h4 class="mt-3">Staffing Levels Over Time</h4>
+            <div id="staffing_levels_plot" class="plot-container"></div>
+        </div>
+        
+        <div class="tab-pane fade" id="staff-costs" role="tabpanel">
+            <h4 class="mt-3">Staff Costs Over Time</h4>
+            <div id="staff_costs_plot" class="plot-container"></div>
+        </div>
+        
+        <div class="tab-pane fade" id="explanations" role="tabpanel">
+            <h4 class="mt-3">Explanations</h4>
+            <div id="explanations-content">
+                <h5><strong>Explanation of inputs and calculations</strong></h5>
+                <p><strong>Startup and closeout parameters:</strong></p>
+                <ul>
+                    <li><strong>Revenue per startup ($):</strong> The amount received for initiating a new study.</li>
+                    <li><strong>Cost per startup ($):</strong> The cost incurred to start a new study.</li>
+                    <li><strong>Revenue per closeout ($):</strong> The amount received when closing out a study.</li>
+                    <li><strong>Cost per closeout ($):</strong> The cost incurred when closing out a study.</li>
+                    <li><strong>New studies per year:</strong> The number of new studies started each year.</li>
+                </ul>
+                <p><strong>Trial parameters:</strong></p>
+                <ul>
+                    <li><strong>Study duration (months):</strong> The expected duration of each study.</li>
+                    <li><strong>Per patient payment ($):</strong> The amount received for each patient enrolled in a study.</li>
+                    <li><strong>Per patient expense ($):</strong> The cost incurred for each patient enrolled, excluding staff costs.</li>
+                    <li><strong>Monthly recruitment rate per study (patients):</strong> The average number of patients recruited per study per month.</li>
+                </ul>
+                <p><strong>Financial parameters:</strong></p>
+                <ul>
+                    <li><strong>Inflation rate (%):</strong> The expected annual inflation rate.</li>
+                    <li><strong>Fixed costs ($):</strong> Monthly fixed costs such as rent and utilities.</li>
+                    <li><strong>Discount rate (%):</strong> The rate used for discounting future cash flows.</li>
+                    <li><strong>Institute overhead (%):</strong> The percentage of revenue taken by the institute from the top-line study budget.</li>
+                </ul>
+                <p><strong>Staffing parameters:</strong></p>
+                <ul>
+                    <li><strong>Average number of studies that an RA can support:</strong> The typical number of concurrent studies that one research assistant can effectively manage.</li>
+                    <li><strong>Average number of studies a coordinator can support:</strong> The typical number of concurrent studies that one coordinator can effectively manage.</li>
+                    <li><strong>Base monthly salary per RA ($):</strong> The base salary for research assistants.</li>
+                    <li><strong>Base monthly salary per coordinator ($):</strong> The base salary for coordinators.</li>
+                    <li><strong>Annual raise (%):</strong> The annual salary increase percentage for staff beyond inflation.</li>
+                    <li><strong>Staff benefits rate (% of salary):</strong> The percentage added to staff salaries to cover benefits.</li>
+                    <li><strong>Severance accrual rate (% of salary):</strong> The percentage of salaries set aside monthly for severance costs.</li>
+                    <li><strong>Administrative premium per staff member ($):</strong> Annual overhead cost per staff member to account for various realities of managing more people. Increases with inflation.</li>
+                </ul>
+                <p><strong>Simulation parameters:</strong></p>
+                <ul>
+                    <li><strong>Total simulation duration (months):</strong> The total time period over which the simulation runs.</li>
+                </ul>
+                <p><strong>Financial calculations:</strong></p>
+                <ul>
+                    <li><strong>Total revenue:</strong> Sum of startup revenue, trial revenue, and closeout revenue, adjusted for institute overhead and inflation.</li>
+                    <li><strong>Total costs:</strong> Includes startup costs, fixed costs, staff costs (including benefits and severance accrual), per-patient expenses, and closeout costs, adjusted for inflation.</li>
+                    <li><strong>Net profit:</strong> Calculated as total revenue minus total costs.</li>
+                    <li><strong>Net present value:</strong> Present value of future net cash flows discounted at the discount rate with initial investment subtracted.</li>
+                    <li><strong>Internal rate of return:</strong> The discount rate at which the net present value of future cash flows is zero. Useful for comparing investment opportunities. Higher is better.</li>
+                </ul>
+                <p><strong>Staffing constraints:</strong></p>
+                <ul>
+                    <li>Staff are hired in whole numbers (integer increments) unless fractional staff hiring is enabled.</li>
+                    <li>Once staff are hired, they remain employed. Staff numbers do not decrease even if workload decreases.</li>
+                    <li>Staff costs are calculated based on the number of staff employed each month, adjusted for annual raises, benefits, and cost variability.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+
+
+                
         <!-- Custom JavaScript -->
         <script>
             // Wait for the DOM to load
@@ -384,7 +443,7 @@
     let display = '';
 
     // Determine how to format the display based on slider ID
-    if (id.includes('rate') || id.includes('overhead') || id.includes('benefits') || id.includes('severance') || id.includes('variability')) {
+    if (id.includes('rate') || id.includes('overhead') || id.includes('benefits') || id.includes('severance') || id.includes('raise')) {
         display = value + '%';
     } else if (id.includes('salary') || id.includes('cost') || id.includes('revenue') || id.includes('payment') || id.includes('expense') || id.includes('premium')) {
         display = '$' + Number(value).toLocaleString();
