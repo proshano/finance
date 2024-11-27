@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Research Center Financial Simulator</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Include Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <!-- Include Bootstrap JS (required for tabs) -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Custom CSS -->
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #sidebar {
+            max-height: 90vh;
+            overflow-y: auto;
+            padding-right: 15px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .slider {
+            width: 100%;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        #dashboard {
+            padding: 20px;
+        }
+
+        #metrics_table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #metrics_table th, #metrics_table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        #metrics_table tr:nth-child(even){background-color: #f2f2f2;}
+
+        #metrics_table th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #explanations {
+            margin-top: 20px;
+        }
+
+        #explanations h5 {
+            font-weight: bold;
+        }
+
+        #explanations ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+
+        /* Adjust the plot heights */
+        .plot-container {
+            height: 400px;
+        }
+
+        .plot-container-large {
+            height: 500px;
+        }
+
+        /* Remove fixed height to allow scrolling */
+        .full-height-row {
+            margin: 0;
+        }
+
+        /* Optional: Enhance the appearance of metric cards */
+        .metric-card {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Optional: Enhance the appearance of plot containers */
+        .plot-container {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="mt-4">Research Center Financial Simulator</h1>
+        <div class="row full-height-row">
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <div id="sidebar">
+                    <!-- Startup and Closeout Parameters -->
+                    <h3>Startup and Closeout Parameters</h3>
+                    <div class="form-group">
+                        <label for="startup_revenue">Revenue per Startup ($):</label>
+                        <input type="range" class="form-control-range slider" id="startup_revenue" min="0" max="10000" value="4000" step="500">
+                        <span id="startup_revenue_value">$4,000</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="startup_cost">Cost per Startup ($):</label>
+                        <input type="range" class="form-control-range slider" id="startup_cost" min="0" max="10000" value="3500" step="500">
+                        <span id="startup_cost_value">$3,500</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="closeout_revenue">Revenue per Closeout ($):</label>
+                        <input type="range" class="form-control-range slider" id="closeout_revenue" min="0" max="10000" value="4000" step="500">
+                        <span id="closeout_revenue_value">$4,000</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="closeout_cost">Cost per Closeout ($):</label>
+                        <input type="range" class="form-control-range slider" id="closeout_cost" min="0" max="10000" value="3500" step="500">
+                        <span id="closeout_cost_value">$3,500</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="new_studies_per_year">New Studies per Year:</label>
+                        <input type="range" class="form-control-range slider" id="new_studies_per_year" min="1" max="20" value="4" step="1">
+                        <span id="new_studies_per_year_value">4</span>
+                    </div>
+
+                    <!-- Trial Parameters -->
+                    <h3>Trial Parameters</h3>
+                    <div class="form-group">
+                        <label for="study_duration">Study Duration (months):</label>
+                        <input type="range" class="form-control-range slider" id="study_duration" min="1" max="60" value="24" step="1">
+                        <span id="study_duration_value">24</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="per_patient_payment">Per Patient Payment ($):</label>
+                        <input type="range" class="form-control-range slider" id="per_patient_payment" min="0" max="50000" value="30000" step="1000">
+                        <span id="per_patient_payment_value">$30,000</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="per_patient_expense">Per Patient Expense ($):</label>
+                        <input type="range" class="form-control-range slider" id="per_patient_expense" min="0" max="20000" value="10000" step="500">
+                        <span id="per_patient_expense_value">$10,000</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="monthly_recruitment_rate">Monthly Recruitment Rate per Study (patients):</label>
+                        <input type="range" class="form-control-range slider" id="monthly_recruitment_rate" min="0" max="5" value="0.3" step="0.1">
+                        <span id="monthly_recruitment_rate_value">0.3</span>
+                    </div>
+
+                    <!-- Financial Parameters -->
+                    <h3>Financial Parameters</h3>
+                    <div class="form-group">
+                        <label for="inflation_rate">Annual Inflation Rate (%):</label>
+                        <input type="range" class="form-control-range slider" id="inflation_rate" min="0" max="10" value="0" step="0.5">
+                        <span id="inflation_rate_value">0%</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="fixed_costs">Monthly Fixed Costs ($):</label>
+                        <input type="range" class="form-control-range slider" id="fixed_costs" min="0" max="50000" value="0" step="1000">
+                        <span id="fixed_costs_value">$0</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="discount_rate">Discount Rate (%):</label>
+                        <input type="range" class="form-control-range slider" id="discount_rate" min="0" max="20" value="0" step="1">
+                        <span id="discount_rate_value">0%</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="institute_overhead">Institute Overhead (%):</label>
+                        <input type="range" class="form-control-range slider" id="institute_overhead" min="0" max="50" value="30" step="1">
+                        <span id="institute_overhead_value">30%</span>
+                    </div>
+
+                    <!-- Staffing Parameters -->
+                    <h3>Staffing Parameters</h3>
+                    <div class="form-group">
+                        <label for="ra_salary">Base Monthly Salary per RA ($):</label>
+                        <input type="range" class="form-control-range slider" id="ra_salary" min="0" max="10000" value="4000" step="500">
+                        <span id="ra_salary_value">$4,000</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="coordinator_salary">Base Monthly Salary per Coordinator ($):</label>
+                        <input type="range" class="form-control-range slider" id="coordinator_salary" min="0" max="15000" value="6000" step="500">
+                        <span id="coordinator_salary_value">$6,000</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="annual_raise">Annual Raise (%):</label>
+                        <input type="range" class="form-control-range slider" id="annual_raise" min="0" max="10" value="5" step="0.5">
+                        <span id="annual_raise_value">5%</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="ras_per_study">Number of RAs per Study:</label>
+                        <input type="range" class="form-control-range slider" id="ras_per_study" min="0" max="5" value="0.2" step="0.1">
+                        <span id="ras_per_study_value">0.2</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="coordinators_per_study">Number of Coordinators per Study:</label>
+                        <input type="range" class="form-control-range slider" id="coordinators_per_study" min="0" max="5" value="0.1" step="0.1">
+                        <span id="coordinators_per_study_value">0.1</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="benefits_rate">Staff Benefits Rate (% of Salary):</label>
+                        <input type="range" class="form-control-range slider" id="benefits_rate" min="0" max="50" value="30" step="1">
+                        <span id="benefits_rate_value">30%</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="severance_rate">Severance Accrual Rate (% of Salary):</label>
+                        <input type="range" class="form-control-range slider" id="severance_rate" min="0" max="20" value="5" step="0.5">
+                        <span id="severance_rate_value">5%</span>
+                    </div>
+
+                    <!-- Risk Parameters -->
+                    <h3>Risk Parameters</h3>
+                    <div class="form-group">
+                        <label for="recruitment_variability">Recruitment Variability (%):</label>
+                        <input type="range" class="form-control-range slider" id="recruitment_variability" min="-20" max="20" value="0" step="1">
+                        <span id="recruitment_variability_value">0%</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="cost_variability">Cost Variability (%):</label>
+                        <input type="range" class="form-control-range slider" id="cost_variability" min="-20" max="20" value="0" step="1">
+                        <span id="cost_variability_value">0%</span>
+                    </div>
+
+                    <!-- Simulation Parameters -->
+                    <h3>Simulation Parameters</h3>
+                    <div class="form-group">
+                        <label for="total_months">Total Simulation Duration (months):</label>
+                        <input type="range" class="form-control-range slider" id="total_months" min="12" max="60" value="60" step="1">
+                        <span id="total_months_value">60</span>
+                    </div>
+
+                    <button id="calculate" class="btn btn-primary mb-3">Run Simulation</button>
+                </div>
+            </div>
+
+            <!-- Main Content with Tabs -->
+            <div class="col-md-9">
+                <div id="dashboard">
+                    <!-- Navigation Tabs -->
+                    <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="outputs-tab" data-toggle="tab" href="#outputs" role="tab" aria-controls="outputs" aria-selected="true">Outputs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="cash-flow-tab" data-toggle="tab" href="#cash-flow" role="tab" aria-controls="cash-flow" aria-selected="false">Cash Flow Plot</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="staffing-levels-tab" data-toggle="tab" href="#staffing-levels" role="tab" aria-controls="staffing-levels" aria-selected="false">Staffing Levels Plot</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="staff-costs-tab" data-toggle="tab" href="#staff-costs" role="tab" aria-controls="staff-costs" aria-selected="false">Staff Costs Plot</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="key-metrics-tab" data-toggle="tab" href="#key-metrics" role="tab" aria-controls="key-metrics" aria-selected="false">Key Metrics</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="explanations-tab" data-toggle="tab" href="#explanations" role="tab" aria-controls="explanations" aria-selected="false">Explanations</a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="resultTabsContent">
+                        <!-- Outputs Tab -->
+                        <div class="tab-pane fade show active" id="outputs" role="tabpanel" aria-labelledby="outputs-tab">
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <h4>Total Revenue</h4>
+                                        <p id="total_revenue_output"></p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <h4>Net Profit</h4>
+                                        <p id="net_profit_output"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <h4>Net Present Value (NPV)</h4>
+                                        <p id="npv_output"></p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <h4>Internal Rate of Return (IRR)</h4>
+                                        <p id="irr_output"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="metric-card">
+                                        <h4>Total Patients Recruited</h4>
+                                        <p id="total_patients_output"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cash Flow Plot Tab -->
+                        <div class="tab-pane fade" id="cash-flow" role="tabpanel" aria-labelledby="cash-flow-tab">
+                            <h4 class="mt-3">Cash Flow Over Time</h4>
+                            <div id="cash_flow_plot" class="plot-container"></div>
+                        </div>
+
+                        <!-- Staffing Levels Plot Tab -->
+                        <div class="tab-pane fade" id="staffing-levels" role="tabpanel" aria-labelledby="staffing-levels-tab">
+                            <h4 class="mt-3">Staffing Levels Over Time</h4>
+                            <div id="staffing_levels_plot" class="plot-container"></div>
+                        </div>
+
+                        <!-- Staff Costs Plot Tab -->
+                        <div class="tab-pane fade" id="staff-costs" role="tabpanel" aria-labelledby="staff-costs-tab">
+                            <h4 class="mt-3">Staff Costs Over Time</h4>
+                            <div id="staff_costs_plot" class="plot-container"></div>
+                        </div>
+
+                        <!-- Key Metrics Tab -->
+                        <div class="tab-pane fade" id="key-metrics" role="tabpanel" aria-labelledby="key-metrics-tab">
+                            <h4 class="mt-3">Key Metrics</h4>
+                            <div id="metrics_table"></div>
+                        </div>
+
+                        <!-- Explanations Tab -->
+                        <div class="tab-pane fade" id="explanations" role="tabpanel" aria-labelledby="explanations-tab">
+                            <h4 class="mt-3">Explanations</h4>
+                            <div id="explanations-content">
+                                <!-- Explanations Content -->
+                                <h5><strong>Explanation of Inputs and Calculations</strong></h5>
+                                <p><strong>Startup and Closeout Parameters:</strong></p>
+                                <ul>
+                                    <li><strong>Revenue per Startup ($):</strong> The amount received for initiating a new study.</li>
+                                    <li><strong>Cost per Startup ($):</strong> The cost incurred to start a new study.</li>
+                                    <li><strong>Revenue per Closeout ($):</strong> The amount received when closing out a study.</li>
+                                    <li><strong>Cost per Closeout ($):</strong> The cost incurred when closing out a study.</li>
+                                    <li><strong>New Studies per Year:</strong> The number of new studies started each year.</li>
+                                </ul>
+                                <p><strong>Trial Parameters:</strong></p>
+                                <ul>
+                                    <li><strong>Study Duration (months):</strong> The expected duration of each study.</li>
+                                    <li><strong>Per Patient Payment ($):</strong> The amount received for each patient enrolled in a study.</li>
+                                    <li><strong>Per Patient Expense ($):</strong> The cost incurred for each patient enrolled, excluding staff costs.</li>
+                                    <li><strong>Monthly Recruitment Rate per Study (patients):</strong> The average number of patients recruited per study per month.</li>
+                                </ul>
+                                <p><strong>Financial Parameters:</strong></p>
+                                <ul>
+                                    <li><strong>Inflation Rate (%):</strong> The expected annual inflation rate.</li>
+                                    <li><strong>Fixed Costs ($):</strong> Monthly fixed costs such as rent and utilities.</li>
+                                    <li><strong>Discount Rate (%):</strong> The rate used for discounting future cash flows.</li>
+                                    <li><strong>Institute Overhead (%):</strong> The percentage of revenue taken by the institute from the top-line study budget.</li>
+                                </ul>
+                                <p><strong>Staffing Parameters:</strong></p>
+                                <ul>
+                                    <li><strong>Base Monthly Salary per RA ($):</strong> The base salary for Research Assistants.</li>
+                                    <li><strong>Base Monthly Salary per Coordinator ($):</strong> The base salary for Coordinators.</li>
+                                    <li><strong>Annual Raise (%):</strong> The annual salary increase percentage for staff.</li>
+                                    <li><strong>Number of RAs per Study:</strong> The number of RAs required per active study.</li>
+                                    <li><strong>Number of Coordinators per Study:</strong> The number of Coordinators required per active study.</li>
+                                    <li><strong>Staff Benefits Rate (% of Salary):</strong> The percentage added to staff salaries to cover benefits.</li>
+                                    <li><strong>Severance Accrual Rate (% of Salary):</strong> The percentage of salaries set aside monthly for severance costs.</li>
+                                </ul>
+                                <p><strong>Risk Parameters:</strong></p>
+                                <ul>
+                                    <li><strong>Recruitment Variability (%):</strong> The expected variability in recruitment rates.</li>
+                                    <li><strong>Cost Variability (%):</strong> The expected variability in costs.</li>
+                                </ul>
+                                <p><strong>Simulation Parameters:</strong></p>
+                                <ul>
+                                    <li><strong>Total Simulation Duration (months):</strong> The total time period over which the simulation runs.</li>
+                                </ul>
+                                <p><strong>Financial Calculations:</strong></p>
+                                <ul>
+                                    <li><strong>Total Revenue:</strong> Sum of startup revenue, trial revenue, and closeout revenue, adjusted for institute overhead and inflation.</li>
+                                    <li><strong>Total Costs:</strong> Includes startup costs, fixed costs, staff costs (including benefits and severance accrual), per-patient expenses, and closeout costs, adjusted for inflation.</li>
+                                    <li><strong>Net Profit:</strong> Calculated as Total Revenue minus Total Costs.</li>
+                                    <li><strong>NPV (Net Present Value):</strong> Present value of future net cash flows discounted at the discount rate.</li>
+                                    <li><strong>IRR (Internal Rate of Return):</strong> The discount rate at which the NPV of future cash flows is zero.</li>
+                                </ul>
+                                <p><strong>Staffing Constraints:</strong></p>
+                                <ul>
+                                    <li>Staff are hired in whole numbers (integer increments). Partial staff cannot be hired.</li>
+                                    <li>Once staff are hired, they remain employed. Staff numbers do not decrease even if workload decreases.</li>
+                                    <li>Staff costs are calculated based on the number of staff employed each month, adjusted for annual raises, benefits, and cost variability.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom JavaScript -->
+        <script>
+            // Wait for the DOM to load
+            $(document).ready(function () {
+                // Update slider values on input
+                $('.slider').on('input', function () {
+                    let id = $(this).attr('id');
+                    let value = parseFloat($(this).val());
+                    let display = '';
+
+                    // Determine how to format the display based on slider ID
+                    if (id.includes('rate') || id.includes('overhead') || id.includes('benefits') || id.includes('severance') || id.includes('variability')) {
+                        display = value + '%';
+                    } else if (id.includes('salary') || id.includes('cost') || id.includes('revenue') || id.includes('payment') || id.includes('expense')) {
+                        display = '$' + Number(value).toLocaleString();
+                    } else {
+                        display = value;
+                    }
+
+                    $('#' + id + '_value').text(display);
+                });
+
+                // Trigger input event to initialize display values
+                $('.slider').each(function () {
+                    $(this).trigger('input');
+                });
+
+                // Run simulation on button click
+                $('#calculate').click(function () {
+                    runSimulation();
+                });
+
+                // Function to format currency
+                function formatCurrency(value) {
+                    return '$' + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+
+                // Function to format percentage
+                function formatPercent(value) {
+                    return value.toFixed(1) + '%';
+                }
+
+                // Function to perform calculations
+                function calculateFinancials(params) {
+                    // Create month array
+                    const months = Array.from({length: params.total_months}, (_, i) => i + 1);
+                    const years_since_start = months.map(m => Math.floor((m - 1) / 12));
+
+                    // Calculate inflation adjustments
+                    const inflation_adjustments = months.map(m => 
+                        Math.pow(1 + params.inflation_rate / 100, m / 12)
+                    );
+
+                    // Apply risk adjustments
+                    const adjusted_recruitment_rate = params.monthly_recruitment_rate * 
+                        (1 + params.recruitment_variability / 100);
+                    const adjusted_fixed_costs = params.fixed_costs * 
+                        (1 + params.cost_variability / 100);
+                    const adjusted_startup_cost = params.startup_cost * 
+                        (1 + params.cost_variability / 100);
+                    const adjusted_closeout_cost = params.closeout_cost * 
+                        (1 + params.cost_variability / 100);
+                    const adjusted_per_patient_expense = params.per_patient_expense * 
+                        (1 + params.cost_variability / 100);
+
+                    // Monthly new studies (fractional)
+                    const monthly_new_studies = params.new_studies_per_year / 12;
+
+                    // Study lifecycle calculations
+                    const studies_started = months.map(m => monthly_new_studies);
+                    const studies_started_cumulative = [];
+                    studies_started.reduce((acc, val, idx) => {
+                        acc += val;
+                        studies_started_cumulative.push(acc);
+                        return acc;
+                    }, 0);
+
+                    const studies_completed = studies_started_cumulative.map((val, idx) => 
+                        Math.max(0, val - (monthly_new_studies * params.study_duration))
+                    );
+
+                    const studies_completed_this_month = studies_completed.map((val, idx) => 
+                        idx === 0 ? val : val - studies_completed[idx - 1]
+                    );
+
+                    const active_studies = studies_started_cumulative.map((val, idx) => 
+                        val - studies_completed[idx]
+                    );
+
+                    // Staffing calculations
+                    const required_num_ras = active_studies.map(s => Math.ceil(s * params.ras_per_study));
+                    const required_num_coordinators = active_studies.map(s => Math.ceil(s * params.coordinators_per_study));
+
+                    // Staff employment (no-decrease constraint)
+                    const num_ras_employed = [];
+                    const num_coordinators_employed = [];
+                    let max_ras = 0;
+                    let max_coordinators = 0;
+                    for (let i = 0; i < months.length; i++) {
+                        max_ras = Math.max(max_ras, required_num_ras[i]);
+                        max_coordinators = Math.max(max_coordinators, required_num_coordinators[i]);
+                        num_ras_employed.push(max_ras);
+                        num_coordinators_employed.push(max_coordinators);
+                    }
+
+                    // Salary calculations with adjustments
+                    const ra_salary_monthly = years_since_start.map(y => 
+                        params.ra_salary * Math.pow(1 + params.annual_raise / 100, y) * (1 + params.cost_variability / 100)
+                    );
+                    const coordinator_salary_monthly = years_since_start.map(y => 
+                        params.coordinator_salary * Math.pow(1 + params.annual_raise / 100, y) * (1 + params.cost_variability / 100)
+                    );
+
+                    // Staff costs with benefits
+                    const base_ra_costs_monthly = num_ras_employed.map((n, i) => n * ra_salary_monthly[i]);
+                    const base_coordinator_costs_monthly = num_coordinators_employed.map((n, i) => n * coordinator_salary_monthly[i]);
+                    const benefits_multiplier = 1 + params.benefits_rate / 100;
+                    const ra_costs_monthly = base_ra_costs_monthly.map(c => c * benefits_multiplier);
+                    const coordinator_costs_monthly = base_coordinator_costs_monthly.map(c => c * benefits_multiplier);
+                    const staff_costs_monthly = ra_costs_monthly.map((c, i) => c + coordinator_costs_monthly[i]);
+
+                    // Severance accrual
+                    const severance_cost_monthly = base_ra_costs_monthly.map((c, i) => 
+                        (c + base_coordinator_costs_monthly[i]) * (params.severance_rate / 100)
+                    );
+
+                    // Institute overhead rate
+                    const institute_overhead_rate = params.institute_overhead / 100;
+
+                    // Startup revenue and costs
+                    const startup_revenue_monthly_pre_overhead = studies_started.map((n, idx) => 
+                        params.startup_revenue * n
+                    );
+                    const startup_revenue_monthly = startup_revenue_monthly_pre_overhead.map((r, idx) => 
+                        r * (1 - institute_overhead_rate) * inflation_adjustments[idx]
+                    );
+                    const startup_costs_monthly = studies_started.map((n, idx) => 
+                        adjusted_startup_cost * n * inflation_adjustments[idx]
+                    );
+
+                    // Closeout revenue and costs
+                    const closeout_revenue_monthly_pre_overhead = studies_completed_this_month.map((n, idx) => 
+                        params.closeout_revenue * n
+                    );
+                    const closeout_revenue_monthly = closeout_revenue_monthly_pre_overhead.map((r, idx) => 
+                        r * (1 - institute_overhead_rate) * inflation_adjustments[idx]
+                    );
+                    const closeout_costs_monthly = studies_completed_this_month.map((n, idx) => 
+                        adjusted_closeout_cost * n * inflation_adjustments[idx]
+                    );
+
+                    // Trial revenue
+                    const trial_revenue_monthly_pre_overhead = active_studies.map((s, idx) => 
+                        params.per_patient_payment * adjusted_recruitment_rate * s
+                    );
+                    const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map((r, idx) => 
+                        r * (1 - institute_overhead_rate) * inflation_adjustments[idx]
+                    );
+
+                    // Per-patient expenses
+                    const total_patients_recruited = active_studies.map((s, idx) => 
+                        adjusted_recruitment_rate * s
+                    );
+                    const per_patient_expenses_monthly = total_patients_recruited.map((n, idx) => 
+                        n * adjusted_per_patient_expense * inflation_adjustments[idx]
+                    );
+
+                    // Total revenue
+                    const total_revenue_monthly = startup_revenue_monthly.map((r, i) => 
+                        r + trial_revenue_monthly[i] + closeout_revenue_monthly[i]
+                    );
+
+                    // Total overhead deducted
+                    const total_overhead_deducted_monthly = startup_revenue_monthly_pre_overhead.map((r, i) =>
+                        (r + trial_revenue_monthly_pre_overhead[i] + closeout_revenue_monthly_pre_overhead[i]) * institute_overhead_rate * inflation_adjustments[i]
+                    );
+
+                    // Fixed costs with inflation
+                    const fixed_costs_monthly = months.map((_, i) => 
+                        adjusted_fixed_costs * inflation_adjustments[i]
+                    );
+
+                    // Total costs
+                    const total_costs_monthly = startup_costs_monthly.map((c, i) =>
+                        c + fixed_costs_monthly[i] + staff_costs_monthly[i] + severance_cost_monthly[i] + per_patient_expenses_monthly[i] + closeout_costs_monthly[i]
+                    );
+
+                    // Net profit
+                    const net_profit_monthly = total_revenue_monthly.map((r, i) => r - total_costs_monthly[i]);
+
+                    // Cumulative net profit
+                    const cumulative_net_profit = [];
+                    net_profit_monthly.reduce((acc, curr, i) => {
+                        acc += curr;
+                        cumulative_net_profit[i] = acc;
+                        return acc;
+                    }, 0);
+
+                    // Cash flows for NPV and IRR calculation
+                    const initial_investment = - (startup_costs_monthly[0] + fixed_costs_monthly[0] + staff_costs_monthly[0] + severance_cost_monthly[0] + per_patient_expenses_monthly[0] + closeout_costs_monthly[0]);
+                    const cash_flows = [initial_investment, ...net_profit_monthly];
+
+                    // Discount rate calculations
+                    const discount_rate_monthly = params.discount_rate / 100 / 12;
+
+                    // NPV calculation
+                    const npv = cash_flows.reduce((acc, cf, i) => 
+                        acc + cf / Math.pow(1 + discount_rate_monthly, i), 0
+                    );
+
+                    // IRR calculation
+                    const irr = calculateIRR(cash_flows);
+
+                    // Total patients recruited
+                    const total_patients = total_patients_recruited.reduce((a, b) => a + b, 0);
+
+                    // Total RA and Coordinator spend
+                    const total_ra_spend = ra_costs_monthly.reduce((a, b) => a + b, 0);
+                    const total_coordinator_spend = coordinator_costs_monthly.reduce((a, b) => a + b, 0);
+
+                    // Return results
+                    return {
+                        months: months,
+                        net_profit_monthly: net_profit_monthly,
+                        cumulative_net_profit: cumulative_net_profit,
+                        total_revenue: total_revenue_monthly.reduce((a, b) => a + b, 0),
+                        total_costs: total_costs_monthly.reduce((a, b) => a + b, 0),
+                        net_profit: net_profit_monthly.reduce((a, b) => a + b, 0),
+                        npv: npv,
+                        irr: irr,
+                        total_revenue_monthly: total_revenue_monthly,
+                        total_costs_monthly: total_costs_monthly,
+                        staff_costs_monthly: staff_costs_monthly,
+                        ra_costs_monthly: ra_costs_monthly,
+                        coordinator_costs_monthly: coordinator_costs_monthly,
+                        severance_cost_monthly: severance_cost_monthly,
+                        per_patient_expenses_monthly: per_patient_expenses_monthly,
+                        active_studies: active_studies,
+                        num_ras_employed: num_ras_employed,
+                        num_coordinators_employed: num_coordinators_employed,
+                        institute_overhead_monthly: total_overhead_deducted_monthly,
+                        total_patients_recruited: total_patients_recruited.reduce((a, b) => a + b, 0),
+                        total_ra_spend: total_ra_spend,
+                        total_coordinator_spend: total_coordinator_spend
+                    };
+                }
+
+                // IRR calculation function using Newton-Raphson method
+                function calculateIRR(cashFlows) {
+                    let irrResult = null;
+                    let guess = 0.1; // Initial guess
+                    let maxIteration = 1000;
+                    let epsMax = 1e-10;
+
+                    for (let i = 0; i < maxIteration; i++) {
+                        let npv = 0;
+                        let derivative = 0;
+                        for (let t = 0; t < cashFlows.length; t++) {
+                            npv += cashFlows[t] / Math.pow(1 + guess, t);
+                            derivative -= t * cashFlows[t] / Math.pow(1 + guess, t + 1);
+                        }
+                        let newGuess = guess - npv / derivative;
+                        if (Math.abs(newGuess - guess) < epsMax) {
+                            irrResult = newGuess;
+                            break;
+                        }
+                        guess = newGuess;
+                    }
+                    return irrResult;
+                }
+
+                // Function to render the cash flow plot
+                function renderCashFlowPlot(fin) {
+                    let data = [
+                        {
+                            x: fin.months,
+                            y: fin.net_profit_monthly,
+                            type: 'bar',
+                            name: 'Monthly Net Profit',
+                            marker: { color: '#1f77b4' }
+                        },
+                        {
+                            x: fin.months,
+                            y: fin.cumulative_net_profit,
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: 'Cumulative Profit',
+                            line: { color: '#ff7f0e' }
+                        }
+                    ];
+                    let layout = {
+                        title: 'Cash Flow Over Time',
+                        xaxis: { title: 'Month' },
+                        yaxis: { title: 'Amount ($)' },
+                        hovermode: 'x unified',
+                        height: 400  // Adjusted height
+                    };
+                    Plotly.newPlot('cash_flow_plot', data, layout, {responsive: true});
+                }
+
+                // Function to render staffing levels plot
+                function renderStaffingLevelsPlot(fin) {
+                    let data = [
+                        {
+                            x: fin.months,
+                            y: fin.num_ras_employed,
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: 'RAs Employed',
+                            line: { color: '#1f77b4' }
+                        },
+                        {
+                            x: fin.months,
+                            y: fin.num_coordinators_employed,
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: 'Coordinators Employed',
+                            line: { color: '#ff7f0e' }
+                        }
+                    ];
+                    let layout = {
+                        title: 'Staffing Levels Over Time',
+                        xaxis: { title: 'Month' },
+                        yaxis: { title: 'Number of Staff', tickformat: 'd' },
+                        hovermode: 'x unified',
+                        height: 400  // Adjusted height
+                    };
+                    Plotly.newPlot('staffing_levels_plot', data, layout, {responsive: true});
+                }
+
+                // Function to render staff costs plot
+                function renderStaffCostsPlot(fin) {
+                    let data = [
+                        {
+                            x: fin.months,
+                            y: fin.ra_costs_monthly,
+                            type: 'bar',
+                            name: 'RA Costs',
+                            marker: { color: '#1f77b4' }
+                        },
+                        {
+                            x: fin.months,
+                            y: fin.coordinator_costs_monthly,
+                            type: 'bar',
+                            name: 'Coordinator Costs',
+                            marker: { color: '#ff7f0e' }
+                        }
+                    ];
+                    let layout = {
+                        barmode: 'stack',
+                        title: 'Staff Costs Over Time',
+                        xaxis: { title: 'Month' },
+                        yaxis: { title: 'Costs ($)' },
+                        hovermode: 'x unified',
+                        height: 400  // Adjusted height
+                    };
+                    Plotly.newPlot('staff_costs_plot', data, layout, {responsive: true});
+                }
+
+                // Function to render metrics table
+                function renderMetricsTable(fin) {
+                    let metrics = [
+                        ['Total Revenue', formatCurrency(fin.total_revenue)],
+                        ['Total Costs', formatCurrency(fin.total_costs)],
+                        ['Net Profit', formatCurrency(fin.net_profit)],
+                        ['Net Present Value (NPV)', formatCurrency(fin.npv)],
+                        ['Internal Rate of Return (IRR)', fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'],
+                        ['Total Overhead Deducted', formatCurrency(fin.institute_overhead_monthly.reduce((a, b) => a + b, 0))],
+                        ['Total RA Spend', formatCurrency(fin.total_ra_spend)],
+                        ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)],
+                        ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()]
+                    ];
+
+                    let table = `
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${metrics.map(([metric, value]) => `
+                                    <tr>
+                                        <td>${metric}</td>
+                                        <td>${value}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    $('#metrics_table').html(table);
+                }
+
+                // Function to run the simulation
+                function runSimulation() {
+                    // Collect inputs
+                    let params = {
+                        startup_revenue: parseFloat($('#startup_revenue').val()),
+                        startup_cost: parseFloat($('#startup_cost').val()),
+                        closeout_revenue: parseFloat($('#closeout_revenue').val()),
+                        closeout_cost: parseFloat($('#closeout_cost').val()),
+                        new_studies_per_year: parseFloat($('#new_studies_per_year').val()),
+
+                        study_duration: parseFloat($('#study_duration').val()),
+                        per_patient_payment: parseFloat($('#per_patient_payment').val()),
+                        per_patient_expense: parseFloat($('#per_patient_expense').val()),
+                        monthly_recruitment_rate: parseFloat($('#monthly_recruitment_rate').val()),
+
+                        inflation_rate: parseFloat($('#inflation_rate').val()),
+                        fixed_costs: parseFloat($('#fixed_costs').val()),
+                        discount_rate: parseFloat($('#discount_rate').val()),
+                        institute_overhead: parseFloat($('#institute_overhead').val()),
+
+                        ra_salary: parseFloat($('#ra_salary').val()),
+                        coordinator_salary: parseFloat($('#coordinator_salary').val()),
+                        annual_raise: parseFloat($('#annual_raise').val()),
+                        ras_per_study: parseFloat($('#ras_per_study').val()),
+                        coordinators_per_study: parseFloat($('#coordinators_per_study').val()),
+                        benefits_rate: parseFloat($('#benefits_rate').val()),
+                        severance_rate: parseFloat($('#severance_rate').val()),
+
+                        recruitment_variability: parseFloat($('#recruitment_variability').val()),
+                        cost_variability: parseFloat($('#cost_variability').val()),
+
+                        total_months: parseInt($('#total_months').val())
+                    };
+
+                    // Perform calculations
+                    let fin = calculateFinancials(params);
+
+                    // Update outputs
+                    $('#total_revenue_output').text(`Total Revenue over ${params.total_months} months: ${formatCurrency(fin.total_revenue)}`);
+                    $('#net_profit_output').text(`Net Profit over ${params.total_months} months: ${formatCurrency(fin.net_profit)}`);
+                    $('#npv_output').text(`Net Present Value (NPV): ${formatCurrency(fin.npv)}`);
+                    $('#irr_output').text(`Internal Rate of Return (IRR): ${fin.irr !== null ? formatPercent(fin.irr * 100) : 'N/A'}`);
+                    $('#total_patients_output').text(`Total Patients Recruited over ${params.total_months} months: ${Math.round(fin.total_patients_recruited).toLocaleString()}`);
+
+                    // Render plots and tables
+                    renderCashFlowPlot(fin);
+                    renderStaffingLevelsPlot(fin);
+                    renderStaffCostsPlot(fin);
+                    renderMetricsTable(fin);
+                }
+
+                // Initialize the first tab as active
+                $('.nav-tabs a[href="#outputs"]').tab('show');
+            });
+        </script>
+    </body>
+</html>
