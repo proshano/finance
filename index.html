@@ -332,7 +332,10 @@
             <a class="nav-link" id="staff-costs-tab" data-toggle="tab" href="#staff-costs" role="tab">Staff Costs Plot</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" id="explanations-tab" data-toggle="tab" href="#explanations" role="tab">Explanations</a>
+            <a class="nav-link" id="explanations-tab" data-toggle="tab" href="#explanations" role="tab">Definitions</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="calculations-tab" data-toggle="tab" href="#calculations" role="tab">Explanations</a>
         </li>
     </ul>
 
@@ -415,6 +418,150 @@
                     <li>Once staff are hired, they remain employed. Staff numbers do not decrease even if workload decreases.</li>
                     <li>Staff costs are calculated based on the number of staff employed each month, adjusted for annual raises, benefits, and cost variability.</li>
                 </ul>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="calculations" role="tabpanel">
+            <h4 class="mt-3">Financial Calculations Explained</h4>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    Study Flow and Patient Calculations
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Basic Study Progression</h5>
+                    <p>Each month, the unit starts a fraction of its yearly study target:</p>
+                    <pre class="bg-light p-3">
+        Monthly New Studies = Annual Study Target ÷ 12
+        
+        Active Studies(Month M) = Sum of Studies Started(Months 1 to M) - Studies Completed(through Month M)
+        Studies Completed(Month M) = Studies Started(Month M - Study Duration)</pre>
+                    
+                    <h5 class="card-title mt-4">Patient Recruitment</h5>
+                    <p>Patient recruitment scales linearly with active studies:</p>
+                    <pre class="bg-light p-3">
+        Monthly Patients = Active Studies × Patients per Study per Month</pre>
+                </div>
+            </div>
+        
+            <div class="card mb-4">
+                <div class="card-header">
+                    Revenue Calculations
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Base Revenue Components</h5>
+                    <p>Revenue comes from three sources, before adjustments:</p>
+                    <pre class="bg-light p-3">
+        Monthly Start Revenue = Monthly New Studies × Revenue per Study Start
+        Monthly Patient Revenue = Active Studies × Patients per Study per Month × Revenue per Patient
+        Monthly Close Revenue = Completed Studies this Month × Revenue per Study Close</pre>
+        
+                    <h5 class="card-title mt-4">Annual Adjustments</h5>
+                    <p>All revenue and costs are adjusted for inflation each year:</p>
+                    <pre class="bg-light p-3">
+        Inflation Factor(Year N) = (1 + Annual Inflation Rate)^(N-1)
+        
+        Example with 3% inflation:
+        Year 1: (1.03)^0 = 1.00
+        Year 2: (1.03)^1 = 1.03
+        Year 3: (1.03)^2 = 1.0609</pre>
+        
+                    <h5 class="card-title mt-4">Final Revenue</h5>
+                    <p>Institution overhead is deducted from all revenue:</p>
+                    <pre class="bg-light p-3">
+        Adjusted Revenue = Base Revenue × Inflation Factor × (1 - Institution Overhead Rate)</pre>
+                </div>
+            </div>
+        
+            <div class="card mb-4">
+                <div class="card-header">
+                    Staff Calculations
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Required Staff Levels</h5>
+                    <p>Staff requirements are based on active studies:</p>
+                    <pre class="bg-light p-3">
+        Required RAs = Active Studies ÷ Studies per RA
+        Required Coordinators = Active Studies ÷ Studies per Coordinator
+        
+        If Fractional Staff Not Allowed:
+            Round these numbers up to next whole number</pre>
+        
+                    <h5 class="card-title mt-4">Staff Salary Adjustments</h5>
+                    <p>Salaries increase with both raises and inflation:</p>
+                    <pre class="bg-light p-3">
+        Adjusted Salary(Year N) = Base Salary × (1 + Annual Raise Rate)^(N-1) × (1 + Inflation Rate)^(N-1)
+        
+        Example with 2% raise and 3% inflation:
+        Year 1: Base × (1.02)^0 × (1.03)^0 = Base
+        Year 2: Base × (1.02)^1 × (1.03)^1 = Base × 1.0506
+        Year 3: Base × (1.02)^2 × (1.03)^2 = Base × 1.1033</pre>
+        
+                    <h5 class="card-title mt-4">Total Staff Cost Components</h5>
+                    <pre class="bg-light p-3">
+        Base Staff Cost = Number of RAs × RA Salary + Number of Coordinators × Coordinator Salary
+        Benefits Cost = Base Staff Cost × Benefits Rate
+        Severance Accrual = Base Staff Cost × (1 + Benefits Rate) × Severance Rate
+        Staff Management Cost = Total Staff Count × (Annual Management Cost ÷ 12) × Inflation Factor
+        
+        Total Staff Cost = Base Staff Cost + Benefits Cost + Severance Accrual + Staff Management Cost</pre>
+                </div>
+            </div>
+        
+            <div class="card mb-4">
+                <div class="card-header">
+                    Other Cost Calculations
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Study-Related Costs</h5>
+                    <pre class="bg-light p-3">
+        Monthly Start Costs = Monthly New Studies × Cost per Study Start × Inflation Factor
+        Monthly Patient Costs = Monthly New Patients × Cost per Patient × Inflation Factor
+        Monthly Close Costs = Completed Studies × Cost per Study Close × Inflation Factor</pre>
+        
+                    <h5 class="card-title mt-4">Fixed Operational Costs</h5>
+                    <pre class="bg-light p-3">
+        Monthly Fixed Costs = Base Fixed Costs × Inflation Factor</pre>
+                </div>
+            </div>
+        
+            <div class="card mb-4">
+                <div class="card-header">
+                    Final Financial Calculations
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Monthly Calculations</h5>
+                    <pre class="bg-light p-3">
+        Monthly Total Revenue = Start Revenue + Patient Revenue + Close Revenue
+        Monthly Total Costs = Staff Costs + Study Costs + Patient Costs + Fixed Costs
+        Monthly Net Profit = Monthly Total Revenue - Monthly Total Costs</pre>
+        
+                    <h5 class="card-title mt-4">Cumulative Position</h5>
+                    <pre class="bg-light p-3">
+        Cumulative Net Profit(Month M) = Sum of Monthly Net Profit(Months 1 to M)</pre>
+                </div>
+            </div>
+        
+            <div class="card mb-4">
+                <div class="card-header">
+                    Important Rules and Constraints
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>All inflation and raise adjustments occur annually, not monthly</li>
+                        <li>Staff numbers can only increase, never decrease</li>
+                        <li>Institution overhead is deducted from revenue before any other calculations</li>
+                        <li>Severance accrual is calculated on salary plus benefits</li>
+                        <li>All monetary values are adjusted for inflation starting in Year 2</li>
+                    </ol>
+        
+                    <h5 class="card-title mt-4">Example Timeline</h5>
+                    <p>For a unit starting in January 2024:</p>
+                    <ul>
+                        <li>Months 1-12 (2024): Base values only</li>
+                        <li>Months 13-24 (2025): First inflation and raise adjustments</li>
+                        <li>Months 25-36 (2026): Second year of compound adjustments</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
