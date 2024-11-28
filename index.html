@@ -367,9 +367,8 @@
         </div>
         
         <div class="tab-pane fade" id="explanations" role="tabpanel">
-            <h4 class="mt-3">Explanations</h4>
+            <h4 class="mt-3">Definitions</h4>
             <div id="explanations-content">
-                <h5><strong>Explanation of inputs and calculations</strong></h5>
                 <p><strong>Startup and closeout parameters:</strong></p>
                 <ul>
                     <li><strong>Revenue per startup ($):</strong> The amount received for initiating a new study.</li>
@@ -881,7 +880,8 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
                         xaxis: { title: 'Month' },
                         yaxis: { title: 'Amount ($)' },
                         hovermode: 'x unified',
-                        height: 400  // Adjusted height
+                        height: 400,
+                        width: 1200  
                     };
                     Plotly.newPlot('cash_flow_plot', data, layout, {responsive: true});
                 }
@@ -915,7 +915,8 @@ const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r =>
             tickformat: fin.params?.allow_fractional_staff ? '.2f' : 'd'
         },
         hovermode: 'x unified',
-        height: 400
+        height: 400,
+        width: 1200
     };
     
     Plotly.newPlot('staffing_levels_plot', data, layout, {responsive: true});
@@ -1047,7 +1048,8 @@ function renderYearlyBreakdownTable(fin, params) {
                         xaxis: { title: 'Month' },
                         yaxis: { title: 'Costs ($)' },
                         hovermode: 'x unified',
-                        height: 400  // Adjusted height
+                        height: 400,
+                        width: 1200
                     };
                     Plotly.newPlot('staff_costs_plot', data, layout, {responsive: true});
                 }
