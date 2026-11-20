@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="See when a new clinical trial unit breaks even, what it earns and how much funding it needs.">
+  <meta name="description" content="Financial forecast for a new clinical trial unit: break-even month, net profit and funding requirement.">
   <title>Pavel's Finance Simulator</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M7 20c3 4 6 4 9 0s6-9 9-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 
@@ -423,7 +423,7 @@
     .t-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
     .note { font-size: 13px; color: var(--ink-2); margin-top: 10px; }
 
-    /* ---------- How it works ---------- */
+    /* ---------- Methods ---------- */
     .prose { padding: 22px 26px 26px; }
     .prose > * { max-width: 76ch; }
     .prose h3 { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; margin: 26px 0 6px; }
@@ -534,14 +534,14 @@
 <body>
   <header class="wrap top">
     <h1>Pavel's financial simulator for new trial units</h1>
-    <p class="lede">Change an assumption to see when the unit breaks even and what it earns.</p>
+    <p class="lede">Adjust the assumptions to see their effect on break-even, net profit and the funding requirement.</p>
     <button type="button" class="btn" id="copy-link">Copy link</button>
   </header>
 
   <!-- Repeats the summary figures for small screens, so screen readers skip it. -->
   <div class="mini" id="mini" aria-hidden="true" hidden></div>
 
-  <noscript><p class="card noscript">This simulator needs JavaScript. Turn it on in your browser and reload the page.</p></noscript>
+  <noscript><p class="card noscript">This simulator requires JavaScript. Enable it in your browser and reload the page.</p></noscript>
 
   <div class="wrap layout">
     <aside class="card inputs" id="assumptions" aria-labelledby="inputs-title">
@@ -567,9 +567,9 @@
         <button type="button" class="tab" role="tab" id="tab-overview" data-tab="overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
         <button type="button" class="tab" role="tab" id="tab-costs" data-tab="costs" aria-controls="panel-costs" aria-selected="false" tabindex="-1">Revenue and costs</button>
         <button type="button" class="tab" role="tab" id="tab-staffing" data-tab="staffing" aria-controls="panel-staffing" aria-selected="false" tabindex="-1">Staffing</button>
-        <button type="button" class="tab" role="tab" id="tab-sensitivity" data-tab="sensitivity" aria-controls="panel-sensitivity" aria-selected="false" tabindex="-1">What matters most</button>
+        <button type="button" class="tab" role="tab" id="tab-sensitivity" data-tab="sensitivity" aria-controls="panel-sensitivity" aria-selected="false" tabindex="-1">Sensitivity</button>
         <button type="button" class="tab" role="tab" id="tab-tables" data-tab="tables" aria-controls="panel-tables" aria-selected="false" tabindex="-1">Tables</button>
-        <button type="button" class="tab" role="tab" id="tab-about" data-tab="about" aria-controls="panel-about" aria-selected="false" tabindex="-1">How it works</button>
+        <button type="button" class="tab" role="tab" id="tab-about" data-tab="about" aria-controls="panel-about" aria-selected="false" tabindex="-1">Methods</button>
       </div>
 
       <section class="panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
@@ -592,8 +592,8 @@
 
       <section class="panel" id="panel-tables" role="tabpanel" aria-labelledby="tab-tables" tabindex="0" hidden>
         <div class="card block">
-          <div class="fig-head"><h3>Year by year <span class="hint">Studies and staff are the numbers at the end of each year</span></h3></div>
-          <section class="table-scroll" id="yearly" tabindex="0" aria-label="Year by year"></section>
+          <div class="fig-head"><h3>Annual results <span class="hint">Active studies and staff are year-end counts</span></h3></div>
+          <section class="table-scroll" id="yearly" tabindex="0" aria-label="Annual results"></section>
         </div>
         <div class="card block">
           <div class="fig-head"><h3>Totals over the forecast</h3></div>
@@ -601,10 +601,10 @@
         </div>
         <details class="card block more" id="monthly-box">
           <summary>
-            <span class="more-title">Month by month</span>
+            <span class="more-title">Monthly results</span>
             <svg class="chev" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </summary>
-          <section class="table-scroll" id="monthly" tabindex="0" aria-label="Month by month"></section>
+          <section class="table-scroll" id="monthly" tabindex="0" aria-label="Monthly results"></section>
         </details>
         <div class="bar">
           <p class="hint">The CSV file lists every revenue and cost line for each month.</p>
@@ -614,18 +614,18 @@
 
       <section class="panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about" tabindex="0" hidden>
         <div class="card prose">
-          <h3>What the simulator does</h3>
-          <p>The simulator forecasts the monthly revenue, costs and staffing of a new clinical trial unit. It starts new studies at a steady rate, recruits patients into every active study, hires staff as the number of active studies grows, and adds up the result month by month.</p>
-          <p>Change any assumption and every figure, chart and table updates. The six assumptions shown first have the largest effect on net profit at their default values. The others sit in the three groups beneath them. Copy link saves the current assumptions in a web address that you can share.</p>
+          <h3>The model</h3>
+          <p>The simulator forecasts monthly revenue, costs and staffing for a new clinical trial unit. Studies start at a constant rate, every active study recruits patients at a constant rate, and staffing rises with the number of active studies. The model calculates net profit for each month and accumulates it over the forecast.</p>
+          <p>All figures, charts and tables recalculate when an assumption changes. The six assumptions listed first have the largest effect on net profit at the default values. The remaining assumptions are in the three groups below them. Copy link stores the current assumptions in a URL that can be shared.</p>
 
-          <h3>The summary</h3>
+          <h3>Summary measures</h3>
           <dl class="defs">
             <dt>Break-even</dt>
-            <dd>The first month from which cumulative net profit stays at or above zero until the end of the forecast.</dd>
+            <dd>The first month from which cumulative net profit remains at or above zero through the end of the forecast.</dd>
             <dt>Net profit</dt>
-            <dd>Revenue after institutional overhead, minus all costs, added up over the forecast.</dd>
-            <dt>Funding needed</dt>
-            <dd>The largest cumulative loss during the forecast. The unit must cover this amount from other sources before it pays for itself.</dd>
+            <dd>Revenue net of institutional overhead, less all costs, summed over the forecast.</dd>
+            <dt>Funding requirement</dt>
+            <dd>The largest cumulative loss during the forecast, which the unit must fund from other sources.</dd>
             <dt>Net profit, last 12 months</dt>
             <dd>Net profit over the final 12 months of the forecast.</dd>
           </dl>
@@ -642,12 +642,12 @@
             <p>Patients recruited = Active studies × Patients per study per month</p>
           </div>
 
-          <h4>Inflation and raises</h4>
-          <p>Both change once a year. Year 1 covers months 1 to 12, year 2 covers months 13 to 24, and so on.</p>
+          <h4>Inflation and salary increases</h4>
+          <p>Both apply annually. Year 1 covers months 1 to 12, year 2 covers months 13 to 24, and so on.</p>
           <div class="formula">
             <p>Inflation factor in year N = (1 + Annual inflation rate) ^ (N − 1)</p>
-            <p>Salary factor in year N = Inflation factor × (1 + Annual raise) ^ (N − 1)</p>
-            <p class="gap">With 3% inflation and a 2% raise:</p>
+            <p>Salary factor in year N = Inflation factor × (1 + Annual salary increase) ^ (N − 1)</p>
+            <p class="gap">With 3% inflation and a 2% salary increase:</p>
             <p>Year 1: inflation factor 1.0000, salary factor 1.0000</p>
             <p>Year 2: inflation factor 1.0300, salary factor 1.0506</p>
             <p>Year 3: inflation factor 1.0609, salary factor 1.1038</p>
@@ -664,10 +664,10 @@
           <div class="formula">
             <p>Research assistants = Active studies ÷ Studies per research assistant</p>
             <p>Coordinators = Active studies ÷ Studies per coordinator</p>
-            <p>Both are rounded up to whole positions unless fractional staff is allowed.</p>
+            <p>Both are rounded up to whole positions unless fractional positions are allowed.</p>
             <p class="gap">Salaries and benefits = Staff × Monthly salary × Salary factor × (1 + Benefits rate)</p>
             <p>Severance accrual = Salaries and benefits × Severance accrual rate</p>
-            <p>Staff administration = Staff × (Admin costs per staff member ÷ 12) × Inflation factor</p>
+            <p>Staff administration = Staff × (Administrative cost per staff member ÷ 12) × Inflation factor</p>
             <p>Staff costs = Salaries and benefits + Severance accrual + Staff administration</p>
           </div>
 
@@ -679,21 +679,21 @@
             <p>Fixed costs = Monthly fixed costs × Inflation factor</p>
           </div>
 
-          <h4>Profit</h4>
+          <h4>Net profit</h4>
           <div class="formula">
             <p>Net profit = Revenue − Staff costs − Other costs</p>
-            <p>Cumulative net profit in month M = Net profit of months 1 to M added together</p>
+            <p>Cumulative net profit in month M = Sum of net profit for months 1 to M</p>
           </div>
 
-          <h3>What the model assumes</h3>
+          <h3>Simplifying assumptions</h3>
           <ul>
             <li>New studies start at a constant rate, so the model counts fractions of a study. Four studies per year is one third of a study each month.</li>
-            <li>Every active study recruits at the same rate for its whole duration.</li>
-            <li>The unit earns the per patient payment, and pays the per patient expenses, in the month it recruits the patient.</li>
-            <li>The institution takes its overhead from all revenue before the unit receives it.</li>
-            <li>Inflation and raises take effect once a year, from the first month of year 2.</li>
-            <li>Staff numbers never fall during the forecast.</li>
-            <li>Severance accrual counts as a staff cost in the month the unit sets it aside.</li>
+            <li>Every active study recruits at the same rate for its full duration.</li>
+            <li>The unit earns the per patient payment and incurs the per patient expenses in the month it recruits the patient.</li>
+            <li>The institution deducts its overhead from all revenue before the unit receives it.</li>
+            <li>Inflation and salary increases take effect annually, from the first month of year 2.</li>
+            <li>Staff numbers do not fall during the forecast.</li>
+            <li>The model records severance accrual as a staff cost in the month of accrual.</li>
           </ul>
         </div>
       </section>
@@ -713,8 +713,8 @@
 
     // The first group is always in view. The others open on request.
     const GROUPS = [
-      { id: 'essentials', title: 'The essentials', sub: '' },
-      { id: 'fees', title: 'Study start and closeout', sub: 'Fees and costs per study' },
+      { id: 'essentials', title: 'Primary assumptions', sub: '' },
+      { id: 'fees', title: 'Study initiation and closeout', sub: 'Fees and costs per study' },
       { id: 'staff', title: 'Staffing', sub: 'Salaries, workload and benefits' },
       { id: 'finance', title: 'Forecast and finance', sub: 'Length, inflation and fixed costs' }
     ];
@@ -734,7 +734,7 @@
         help: 'Number of studies the unit starts each year. Starts are spread evenly across the months.' },
       { key: 'study_duration', group: 'essentials', label: 'Study duration', kind: 'count', unit: ['month', 'months'],
         min: 1, max: 60, step: 1, decimals: 0, def: 24, whole: true, hardMin: 1,
-        help: 'Number of months each study stays active and recruits patients. Closeout follows in the next month.' },
+        help: 'Number of months each study remains active and recruits patients. Closeout follows in the next month.' },
       { key: 'patients_per_month', group: 'essentials', label: 'Patients per study per month', kind: 'count',
         min: 0, max: 5, step: 0.1, decimals: 2, def: 0.3,
         help: 'Average number of patients each active study recruits per month.' },
@@ -746,7 +746,7 @@
         help: 'Cost of each patient recruited, excluding staff costs.' },
       { key: 'institute_overhead', group: 'essentials', label: 'Institutional overhead', kind: 'percent',
         min: 0, max: 50, step: 1, decimals: 2, def: 30, hardMax: 100,
-        help: 'Share of all study revenue that the institution keeps. The unit receives the rest.' },
+        help: 'Share of all study revenue retained by the institution. The unit receives the remainder.' },
 
       { key: 'startup_revenue', group: 'fees', label: 'Revenue per study initiation', kind: 'money',
         min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
@@ -773,30 +773,30 @@
       { key: 'studies_per_coordinator', group: 'staff', label: 'Studies per coordinator', kind: 'count',
         min: 1, max: 15, step: 0.5, decimals: 1, def: 10, hardMin: 0.1,
         help: 'Number of active studies one coordinator can support.' },
-      { key: 'annual_raise', group: 'staff', label: 'Annual raise above inflation', short: 'Annual raise', kind: 'percent',
+      { key: 'annual_raise', group: 'staff', label: 'Annual salary increase above inflation', short: 'Annual salary increase', kind: 'percent',
         min: 0, max: 10, step: 0.5, decimals: 2, def: 2,
-        help: 'Yearly salary increase on top of inflation, applied from year 2.' },
+        help: 'Salary increase in excess of inflation, applied each year from year 2.' },
       { key: 'benefits_rate', group: 'staff', label: 'Benefits (% of salary)', short: 'Benefits', kind: 'percent',
         min: 0, max: 50, step: 1, decimals: 2, def: 30,
         help: 'Cost of benefits as a percentage of salary.' },
       { key: 'severance_rate', group: 'staff', label: 'Severance accrual (% of salary and benefits)', short: 'Severance accrual', kind: 'percent',
         min: 0, max: 20, step: 0.5, decimals: 2, def: 5,
-        help: 'Amount set aside each month for severance, as a percentage of salary plus benefits.' },
-      { key: 'admin_premium', group: 'staff', label: 'Admin costs per staff member, per year', short: 'Admin costs per staff member', kind: 'money',
+        help: 'Amount accrued each month for severance, as a percentage of salary plus benefits.' },
+      { key: 'admin_premium', group: 'staff', label: 'Administrative cost per staff member, per year', short: 'Administrative cost per staff member', kind: 'money',
         min: 0, max: 10000, step: 500, decimals: 0, def: 5000,
-        help: 'Yearly cost of managing each staff member. It rises with inflation.' },
-      { key: 'allow_fractional_staff', group: 'staff', label: 'Allow fractional staff', kind: 'toggle', def: false,
-        help: 'Lets the unit hire part of a position, such as 0.5 of a full-time role, as in a shared staffing model. When off, it hires whole positions only.' },
+        help: 'Annual administrative cost of each staff member. It rises with inflation.' },
+      { key: 'allow_fractional_staff', group: 'staff', label: 'Allow fractional positions', kind: 'toggle', def: false,
+        help: 'Allows the unit to hire a fraction of a position, such as 0.5 of a full-time role, as in a shared staffing arrangement. When off, the unit hires whole positions only.' },
 
       { key: 'total_months', group: 'finance', label: 'Forecast length', kind: 'count', unit: ['month', 'months'],
         min: 12, max: 60, step: 1, decimals: 0, def: 60, whole: true, hardMin: 1, hardMax: 600, vary: false,
         help: 'Number of months the forecast covers.' },
       { key: 'inflation_rate', group: 'finance', label: 'Annual inflation rate', kind: 'percent',
         min: 0, max: 10, step: 0.5, decimals: 2, def: 3,
-        help: 'Yearly increase applied to revenue, costs and salaries from year 2.' },
+        help: 'Annual increase applied to revenue, costs and salaries from year 2.' },
       { key: 'fixed_costs', group: 'finance', label: 'Monthly fixed costs', kind: 'money',
         min: 0, max: 50000, step: 1000, decimals: 0, def: 0,
-        help: 'Costs that do not depend on activity, such as rent and utilities.' }
+        help: 'Costs that do not vary with activity, such as rent and utilities.' }
     ];
 
     const BY_KEY = {};
@@ -1296,7 +1296,7 @@
 
     function buildSummary() {
       const meaning = {
-        net: 'Revenue after institutional overhead, minus all costs, added up over the forecast.',
+        net: 'Revenue net of institutional overhead, less all costs, summed over the forecast.',
         need: 'The largest cumulative loss during the forecast.',
         last: 'Net profit over the final 12 months of the forecast.'
       };
@@ -1305,7 +1305,7 @@
         $('figures').append(el('div', { class: 'figure', 'data-kpi': id }, t.label, t.value, el('dd', { class: 'k-note' }, t.dot, t.note)));
         tiles[id] = t;
       });
-      [['net', 'Net profit'], ['even', 'Break-even'], ['need', 'Funding needed']].forEach(pair => {
+      [['net', 'Net profit'], ['even', 'Break-even'], ['need', 'Funding required']].forEach(pair => {
         const value = el('b');
         $('mini').append(el('div', {}, el('small', { text: pair[1] }), value));
         minis[pair[0]] = value;
@@ -1337,8 +1337,8 @@
       let brief;
       if (!sum.everInDeficit) {
         const earns = sum.netProfit >= 0.5;
-        verdict = earns ? 'Profitable from the first month' : 'No profit and no loss';
-        detail = earns ? 'The unit never runs a cumulative loss' : 'Revenue equals costs over ' + span;
+        verdict = earns ? 'Profitable from the first month' : 'Neither profit nor loss';
+        detail = earns ? 'Cumulative net profit is never negative' : 'Revenue equals costs over ' + span;
         tone = earns ? 'good' : '';
         brief = earns ? 'Month 1' : 'None';
       } else if (sum.breakEvenMonth) {
@@ -1347,8 +1347,8 @@
         tone = 'good';
         brief = 'Month ' + sum.breakEvenMonth;
       } else {
-        verdict = 'Does not break even in ' + span;
-        detail = moneyShort(-sum.finalCumulative) + ' behind at month ' + months;
+        verdict = 'Does not break even within ' + span;
+        detail = 'Cumulative loss of ' + moneyShort(-sum.finalCumulative) + ' at month ' + months;
         tone = 'bad';
         brief = 'Not reached';
       }
@@ -1365,7 +1365,7 @@
       const share = ratio <= 10 ? ' · ' + num(ratio * 100, 1) + '% of revenue' : '';
       setTile('net', 'Net profit over ' + span, moneyShort(sum.netProfit),
         (profit ? 'Profit' : 'Loss') + share, profit ? 'good' : 'bad', money(sum.netProfit));
-      setTile('need', 'Funding needed', moneyShort(sum.fundingNeeded),
+      setTile('need', 'Funding requirement', moneyShort(sum.fundingNeeded),
         sum.everInDeficit ? 'Peak cumulative loss, month ' + sum.lowestMonth : 'No cumulative loss in any month',
         '', money(sum.fundingNeeded));
       setTile('last', 'Net profit, last ' + sum.lastMonths + ' months', moneyShort(sum.lastNet),
@@ -1773,7 +1773,7 @@
     const chart = {};
     function buildCharts() {
       chart.cumulative = createChart('chart-cumulative', 'Cumulative net profit', 'Total profit or loss since month 1', [240, 0.42, 420], 'money');
-      chart.costs = createChart('chart-costs', 'Monthly revenue and costs', 'Revenue is shown after institutional overhead', [200, 0.27, 320], 'money');
+      chart.costs = createChart('chart-costs', 'Monthly revenue and costs', 'Revenue is net of institutional overhead', [200, 0.27, 320], 'money');
       chart.monthly = createChart('chart-monthly', 'Monthly net profit', 'Revenue minus costs in each month', [120, 0.15, 170], 'money');
       chart.headcount = createChart('chart-headcount', 'Staff employed', 'Positions filled in each month', [130, 0.16, 190], 'count');
       chart.staffcosts = createChart('chart-staffcosts', 'Monthly staff costs', 'Salaries and benefits, severance accrual and administration', [160, 0.22, 260], 'money');
@@ -1889,14 +1889,14 @@
       drawCharts();
     }
 
-    /* ---------- What matters most ---------- */
+    /* ---------- Sensitivity ---------- */
     let sensitivityFig = null;
     let sensitivityTip = null;
 
     function renderSensitivity() {
       if (!sensitivityFig) {
-        sensitivityFig = createFigure($('sensitivity'), 'What moves net profit most',
-          'How net profit changes when one input moves by 20% and the rest stay the same');
+        sensitivityFig = createFigure($('sensitivity'), 'Sensitivity of net profit',
+          'Change in net profit when each assumption alone varies by 20%');
         sensitivityTip = el('div', { class: 'tip', role: 'status', hidden: true });
         sensitivityFig.redraw = renderSensitivity;
       }
@@ -1908,11 +1908,11 @@
       const still = result.rows.filter(row => row.range < 0.5);
       const name = row => M.BY_KEY[row.key].short || M.BY_KEY[row.key].label;
       const shown = (row, value) => display(M.BY_KEY[row.key], value);
-      setLegend(fig, [{ name: 'Input ' + percent + ' higher', color: 'c1' }, { name: 'Input ' + percent + ' lower', color: 'c2' }]);
+      setLegend(fig, [{ name: 'Assumption ' + percent + ' higher', color: 'c1' }, { name: 'Assumption ' + percent + ' lower', color: 'c2' }]);
 
       if (fig.showTable) {
         fig.table.replaceChildren(buildTable(
-          ['Input', 'Lower value', 'Higher value', 'Net profit at lower value', 'Net profit at higher value', 'Change at lower value', 'Change at higher value'],
+          ['Assumption', 'Lower value', 'Higher value', 'Net profit at lower value', 'Net profit at higher value', 'Change at lower value', 'Change at higher value'],
           result.rows.map(row => [name(row), shown(row, row.low), shown(row, row.high), cash(row.netLow), cash(row.netHigh),
             { text: moneyChange(row.deltaLow), neg: isLoss(row.deltaLow) }, { text: moneyChange(row.deltaHigh), neg: isLoss(row.deltaHigh) }])));
         return;
@@ -1962,15 +1962,15 @@
       });
 
       const notes = [];
-      if (moving.length > top.length) notes.push('The chart shows the ' + top.length + ' inputs with the largest effect. The table lists all of them.');
+      if (moving.length > top.length) notes.push('The chart shows the ' + top.length + ' assumptions with the largest effect. The table lists all of them.');
       if (still.length) {
-        notes.push('A ' + percent + ' change in these inputs leaves net profit unchanged in this scenario: ' +
-          still.map(row => name(row) + (row.low === row.high ? ' (now ' + shown(row, row.base) + ')' : '')).join(', ') + '.');
+        notes.push('A ' + percent + ' change in these assumptions does not change net profit in this scenario: ' +
+          still.map(row => name(row) + (row.low === row.high ? ' (currently ' + shown(row, row.base) + ')' : '')).join(', ') + '.');
       }
       tip.hidden = true;
       fig.body.replaceChildren(
         el('div', { class: 'tornado' },
-          el('div', { class: 't-head' }, el('span', { text: 'Input and the two values tested' }), el('span', { text: 'Change in net profit' }), el('span', { text: 'Range' })),
+          el('div', { class: 't-head' }, el('span', { text: 'Assumption and the two values tested' }), el('span', { text: 'Change in net profit' }), el('span', { text: 'Range' })),
           el('div', { class: 't-rows' },
             el('div', { class: 't-grid', 'aria-hidden': 'true' }, scale.ticks.map(t => el('i', { class: Math.abs(t) < scale.step / 1000 ? 'zero' : null, style: 'left:' + r2(pos(t)) + '%' }))),
             list),
@@ -2002,7 +2002,7 @@
       const staff = v => num(v, sim.inputs.allow_fractional_staff ? 2 : 0);
 
       $('yearly').replaceChildren(buildTable(
-        ['Year', 'Revenue', 'Staff costs', 'Other costs', 'Total costs', 'Profit', 'Cumulative profit', 'Active studies', 'Assistants / coordinators'],
+        ['Year', 'Revenue', 'Staff costs', 'Other costs', 'Total costs', 'Net profit', 'Cumulative net profit', 'Active studies', 'Assistants / coordinators'],
         M.yearly(sim).map(r => [r.months < 12 ? r.year + ' (' + r.months + ' months)' : String(r.year), money(r.revenue), money(r.costStaff), money(r.costOther),
           money(r.costs), cash(r.net), cash(r.cumulative), num(r.active, 2), staff(r.ra) + ' / ' + staff(r.coordinators)]),
         ['Total', money(sum.revenue), money(sum.costStaff), money(sum.costOther), money(sum.costs), cash(sum.netProfit), cash(sum.finalCumulative), '', '']));
