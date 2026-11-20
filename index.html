@@ -1,1157 +1,1978 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Pavel's Finance Simulator</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    
-    <style>
-        /* Base styles */
-        html, body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            height: 100%;
-        }
-        
-        /* Layout structure */
-        .app-container {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        
-        .content-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: row;
-            padding: 20px;
-        }
-        
-        /* Header styles */
-        .header {
-            padding: 20px;
-            background-color: #fff;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .last-updated {
-            color: #666;
-            font-size: 0.8em;
-            margin-bottom: 10px;
-            font-style: italic;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Forecast the revenue, costs, staffing and break-even point of a new clinical trial unit.">
+  <title>Pavel's Finance Simulator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M8 23v-5M13.5 23v-9M19 23v-7M24.5 23V9' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 
-        /* Sidebar styles */
-        .sidebar-container {
-    width: 400px;     /* Increased from 300px to give more room */
-    flex-shrink: 0;
-    margin-right: 30px;  /* Slightly increased margin for better spacing */
-}
+  <!--
+    This page is one file with no outside dependencies. It has three parts:
+      1. Styles (colours are defined once, for light and dark screens).
+      2. The model, in the script with id "model". Pure calculations, no page access.
+      3. The page, in the script with id "app". Inputs, charts and tables.
+    To change an input, its range or its default, edit the PARAMS list in the model.
+  -->
+  <style>
+    /* ---------- Colours ---------- */
+    :root {
+      color-scheme: light;
+      --page: #f9f9f7;
+      --surface: #fcfcfb;
+      --surface-2: #f1f0ec;
+      --ink: #0b0b0b;
+      --ink-2: #52514e;
+      --muted: #6b6a65;
+      --border: rgba(11, 11, 11, 0.10);
+      --border-strong: rgba(11, 11, 11, 0.22);
+      --control: #898781;
+      --hover: rgba(11, 11, 11, 0.05);
+      --shade: rgba(11, 11, 11, 0.14);
+      --grid: #e1e0d9;
+      --axis: #c3c2b7;
+      --accent: #256abf;
+      --accent-fill: #2a78d6;
+      --neg: #c43131;
+      --good: #0ca30c;
+      --bad: #d03b3b;
+      /* Chart series, in fixed order. Checked for colour-blind separation. */
+      --s1: #2a78d6;
+      --s2: #eb6834;
+      --s3: #1baf7a;
+      --s4: #eda100;
+      --s-red: #e34948;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --page: #0d0d0d;
+        --surface: #1a1a19;
+        --surface-2: #242422;
+        --ink: #f0efec;
+        --ink-2: #c3c2b7;
+        --muted: #9a988f;
+        --border: rgba(255, 255, 255, 0.10);
+        --border-strong: rgba(255, 255, 255, 0.24);
+        --control: #898781;
+        --hover: rgba(255, 255, 255, 0.06);
+        --shade: rgba(255, 255, 255, 0.16);
+        --grid: #2c2c2a;
+        --axis: #383835;
+        --accent: #6da7ec;
+        --accent-fill: #3987e5;
+        --neg: #ee7f7f;
+        --good: #0ca30c;
+        --bad: #d03b3b;
+        --s1: #3987e5;
+        --s2: #d95926;
+        --s3: #199e70;
+        --s4: #c98500;
+        --s-red: #e66767;
+      }
+    }
 
-#sidebar {
-    background-color: #f8f9fa;
-    padding: 20px;    /* Increased padding for better visual spacing */
-    border-radius: 8px;
-    position: static;  /* Changed from sticky to static */
-    height: auto;     /* Let it take natural height */
-    overflow-y: visible; /* Remove scrolling */
-}
+    /* ---------- Base ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    h1, h2, h3, h4, p, dl, dd, ul { margin: 0; }
+    button, input { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .wrap { max-width: 1360px; margin: 0 auto; padding: 0 24px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-        /* Main content styles */
-        .main-content {
-            flex: 1;
-            min-width: 0;
-        }
+    .btn {
+      border: 1px solid var(--control);
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-weight: 550;
+      cursor: pointer;
+    }
+    .btn:hover { background: var(--surface-2); }
+    .btn.quiet {
+      border-color: transparent;
+      background: none;
+      color: var(--accent);
+      padding: 3px 8px;
+      font-size: 12.5px;
+      white-space: nowrap;
+    }
+    .btn.quiet:hover { background: var(--hover); }
 
-        /* Form elements */
-        .section-header {
-            font-size: 0.9rem;
-            font-weight: bold;
-            margin: 8px 0 4px 0;
-            padding-top: 4px;
-            border-top: 1px solid #ddd;
-            color: #2c3e50;
-        }
+    /* ---------- Header ---------- */
+    .app-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px 24px;
+      padding-top: 20px;
+      padding-bottom: 16px;
+    }
+    .app-header h1 { font-size: 20px; line-height: 1.25; font-weight: 650; letter-spacing: -0.01em; }
+    .lede { color: var(--ink-2); margin-top: 3px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-        .form-group {
-            margin-bottom: 2px;
-        }
+    /* Headline figures that stay in view on small screens */
+    .mini {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 7px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .mini div { min-width: 0; }
+    .mini small { display: block; font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mini b { font-size: 15px; font-weight: 650; white-space: nowrap; }
 
-        .form-group label {
-            font-size: 0.8rem;
-            margin-bottom: 2px;
-            color: #666;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    /* ---------- Layout ---------- */
+    .layout {
+      display: grid;
+      grid-template-columns: clamp(290px, 26vw, 340px) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+      padding-bottom: 24px;
+    }
+    .results { min-width: 0; }
+    /* Results stay beside the inputs while the page scrolls, when they fit the window. */
+    @media (min-width: 961px) { .results.is-pinned { position: sticky; top: 12px; } }
 
-        .value-display {
-            font-size: 0.8rem;
-            color: #666;
-        }
+    /* ---------- Inputs ---------- */
+    .inputs { padding: 4px 16px 10px; }
+    .inputs-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 0 6px; }
+    .inputs-head h2 { font-size: 15px; font-weight: 650; }
+    .group { border-top: 1px solid var(--border); }
+    .group > summary { cursor: pointer; padding: 10px 0 8px; font-weight: 650; font-size: 13px; border-radius: 4px; }
+    .group-body { padding-bottom: 6px; }
+    .field {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 10px;
+      padding: 2px 0 6px;
+    }
+    .field label { font-size: 13px; line-height: 1.3; color: var(--ink-2); }
+    .field input[type="range"] {
+      grid-column: 1 / -1;
+      width: 100%;
+      height: 24px;
+      margin: 1px 0 0;
+      accent-color: var(--accent-fill);
+      cursor: pointer;
+    }
+    .num {
+      width: 86px;
+      padding: 3px 7px;
+      text-align: right;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      background: var(--surface);
+      border: 1px solid var(--control);
+      border-radius: 6px;
+    }
+    .switch { display: flex; align-items: center; gap: 10px; min-height: 28px; font-size: 13px; color: var(--ink); cursor: pointer; }
+    .toggle { padding: 4px 0 2px; }
+    /* The knob is drawn as a background, which every browser paints on a checkbox. */
+    .switch input {
+      appearance: none;
+      -webkit-appearance: none;
+      flex: none;
+      width: 36px;
+      height: 20px;
+      margin: 0;
+      border-radius: 10px;
+      background: radial-gradient(circle at 10px 50%, #fff 7.5px, transparent 8.5px) var(--control);
+      cursor: pointer;
+    }
+    .switch input:checked { background: radial-gradient(circle at 26px 50%, #fff 7.5px, transparent 8.5px) var(--accent-fill); }
+    .help { font-size: 12px; line-height: 1.4; color: var(--muted); margin-top: 2px; }
 
-        .slider {
-            width: 100%;
-            margin: 2px 0;
-            padding: 0;
-            height: 1rem;
-        }
+    /* ---------- Headline figures ---------- */
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .tile { padding: 11px 14px 12px; min-width: 0; }
+    .tile dt { font-size: 12.5px; color: var(--ink-2); }
+    .tile .k-value { font-size: 26px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin-top: 1px; }
+    .tile .k-note { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; color: var(--ink-2); margin-top: 1px; }
+    /* Good is a round dot and bad a diamond, so the two differ by shape as well as colour. */
+    .status { flex: none; width: 8px; height: 8px; border-radius: 50%; transform: translateY(-1px); }
+    .status.good { background: var(--good); }
+    .status.bad { background: var(--bad); border-radius: 1px; transform: translateY(-1px) rotate(45deg); }
 
-        /* Plot container */
-        .plot-container {
-            height: 400px;
-            margin-top: 20px;
-        }
+    /* ---------- Tabs ---------- */
+    .tabs {
+      position: relative;
+      display: flex;
+      gap: 2px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+      /* A soft shadow at either edge shows that more tabs lie that way. */
+      background:
+        linear-gradient(90deg, var(--page) 40%, transparent) 0 0 / 32px 100% no-repeat local,
+        linear-gradient(270deg, var(--page) 40%, transparent) 100% 0 / 32px 100% no-repeat local,
+        linear-gradient(90deg, var(--shade), transparent) 0 0 / 14px 100% no-repeat scroll,
+        linear-gradient(270deg, var(--shade), transparent) 100% 0 / 14px 100% no-repeat scroll;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: none;
+      border: 0;
+      background: none;
+      padding: 9px 12px;
+      border-radius: 6px 6px 0 0;
+      color: var(--ink-2);
+      font-weight: 550;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .tab:hover { color: var(--ink); background: var(--hover); }
+    .tab[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); }
+    .tab:focus-visible { outline-offset: -2px; }
+    .panel > * + * { margin-top: 12px; }
+    .panel:focus-visible { outline-offset: 4px; border-radius: 8px; }
+    .block { padding: 12px 14px; }
 
-        /* Utility classes */
-        .btn-primary {
-            margin-top: 8px;
-            padding: 4px 8px;
-            font-size: 0.9rem;
-        }
+    /* ---------- Figures (charts and their table views) ---------- */
+    .fig-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+    .fig-head h3 { font-size: 14px; font-weight: 650; }
+    .hint { font-weight: 400; font-size: 12.5px; color: var(--ink-2); }
+    h3 .hint { margin-left: 8px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 3px 14px; margin: 2px 0 4px; font-size: 12.5px; color: var(--ink-2); }
+    .legend span { white-space: nowrap; }
+    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+    .sw.line { width: 14px; height: 2px; border-radius: 1px; vertical-align: middle; }
+    .fig-body { position: relative; }
+    .plot { position: relative; touch-action: pan-y; border-radius: 6px; }
+    .plot svg { position: absolute; inset: 0; display: block; }
+    svg text { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+    svg text.label { font-size: 12px; fill: var(--ink-2); font-variant-numeric: normal; }
+    svg text.halo { fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    svg text.halo.quiet { fill: var(--ink-2); }
+    .grid { stroke: var(--grid); }
+    .axis { stroke: var(--axis); }
+    .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .area { opacity: 0.1; }
+    .dot { stroke: var(--surface); stroke-width: 2; }
+    .band { fill: var(--hover); }
+    .fill-c1 { fill: var(--s1); } .stroke-c1 { stroke: var(--s1); } .bg-c1 { background: var(--s1); }
+    .fill-c2 { fill: var(--s2); } .stroke-c2 { stroke: var(--s2); } .bg-c2 { background: var(--s2); }
+    .fill-c3 { fill: var(--s3); } .stroke-c3 { stroke: var(--s3); } .bg-c3 { background: var(--s3); }
+    .fill-c4 { fill: var(--s4); } .stroke-c4 { stroke: var(--s4); } .bg-c4 { background: var(--s4); }
+    .fill-red { fill: var(--s-red); } .stroke-red { stroke: var(--s-red); } .bg-red { background: var(--s-red); }
+    .fill-ink { fill: var(--ink); } .stroke-ink { stroke: var(--ink); } .bg-ink { background: var(--ink); }
 
-        .custom-control-label {
-            font-size: 0.8rem;
-        }
+    .tip {
+      position: absolute;
+      z-index: 3;
+      pointer-events: none;
+      min-width: 150px;
+      padding: 8px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+      font-size: 12.5px;
+    }
+    .tip-title { color: var(--ink-2); margin-bottom: 3px; white-space: nowrap; }
+    .tip-row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .tip-row .key { flex: none; width: 12px; height: 3px; border-radius: 2px; }
+    .tip-row b { font-weight: 650; font-variant-numeric: tabular-nums; }
+    .tip-row .name { color: var(--ink-2); }
+    .tip-row.total { margin-top: 3px; padding-top: 3px; border-top: 1px solid var(--border); }
 
-        .custom-control {
-            margin-bottom: 4px;
-        }
+    /* ---------- Tables ---------- */
+    .table-scroll { overflow-x: auto; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data th, .data td { padding: 6px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
+    .data thead th { font-size: 12.5px; font-weight: 600; color: var(--ink-2); vertical-align: bottom; white-space: normal; }
+    .data tbody th { font-weight: 500; }
+    .data .n { text-align: right; font-variant-numeric: tabular-nums; }
+    .data tfoot th, .data tfoot td { font-weight: 650; border-bottom: 0; border-top: 1px solid var(--border-strong); }
+    .data th:first-child, .data td:first-child { padding-left: 2px; }
+    .data th:last-child, .data td:last-child { padding-right: 2px; }
+    .neg { color: var(--neg); }
+    .totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
+    .totals dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .totals dt { color: var(--ink-2); }
+    .totals dd { font-weight: 550; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .totals .sum dt, .totals .sum dd { color: var(--ink); font-weight: 650; }
+    .totals .sum dd.neg { color: var(--neg); }
 
-        small.form-text {
-            font-size: 0.7rem;
-            margin-top: 2px;
-            color: #888;
-        }
+    /* ---------- Sensitivity chart ---------- */
+    .tornado { --name: 36%; --figure: 62px; }
+    .t-head, .t-row, .t-axis { display: grid; grid-template-columns: var(--name) minmax(0, 1fr) var(--figure); column-gap: 12px; align-items: center; }
+    .t-head { font-size: 12px; line-height: 1.25; color: var(--muted); padding-bottom: 2px; }
+    .t-head :last-child, .t-figure { text-align: right; }
+    .t-rows { position: relative; }
+    .t-grid { position: absolute; top: 0; bottom: 0; left: calc(var(--name) + 12px); right: calc(var(--figure) + 12px); pointer-events: none; }
+    .t-grid i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); }
+    .t-grid i.zero { background: var(--axis); }
+    .t-row { position: relative; padding: 4px 0; border-radius: 6px; }
+    .t-row:hover { background: var(--hover); }
+    .t-name { min-width: 0; font-size: 13px; line-height: 1.25; }
+    .t-range { display: block; font-size: 11.5px; color: var(--muted); }
+    .t-track { position: relative; height: 20px; }
+    .t-bar { position: absolute; height: 8px; min-width: 1px; }
+    .t-bar.hi { top: 1px; }
+    .t-bar.lo { top: 11px; }
+    .t-figure { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .t-axis { margin-top: 2px; }
+    .t-ticks { position: relative; height: 16px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .t-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+    .note { font-size: 12.5px; color: var(--ink-2); margin-top: 8px; }
 
-        /* Component-specific styles */
-        h3 {
-            font-size: 1rem;
-            margin: 8px 0 4px 0;
-            padding-bottom: 4px;
-        }
+    /* ---------- How it works ---------- */
+    .prose { padding: 16px 20px 20px; }
+    .prose > * { max-width: 78ch; }
+    .prose h3 { font-size: 16px; font-weight: 650; margin: 22px 0 6px; }
+    .prose h3:first-child { margin-top: 0; }
+    .prose h4 { font-size: 13.5px; font-weight: 650; margin: 14px 0 4px; }
+    .prose p, .prose li { color: var(--ink-2); }
+    .prose > p + p { margin-top: 8px; }
+    .prose ul { padding-left: 20px; }
+    .prose li { margin: 3px 0; }
+    .defs dt { font-weight: 600; margin-top: 7px; }
+    .defs dd { color: var(--ink-2); }
+    .prose > .formula {
+      max-width: none;
+      margin: 4px 0 10px;
+      padding: 9px 12px;
+      background: var(--surface-2);
+      border-radius: 8px;
+      font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    /* A formula that wraps continues indented under its first line. */
+    .formula p { color: var(--ink); padding-left: 3ch; text-indent: -3ch; }
+    .formula p.gap { margin-top: 8px; }
 
-        input[type="range"] {
-            margin: 2px 0;
-        }
-    </style>
+    /* ---------- Footer and messages ---------- */
+    .app-footer { padding-bottom: 28px; font-size: 12.5px; color: var(--muted); }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: calc(100vw - 24px);
+      padding: 9px 14px;
+      background: var(--ink);
+      color: var(--page);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      font-size: 13px;
+    }
+    .toast button { border: 0; padding: 0; background: none; color: inherit; font-weight: 650; text-decoration: underline; cursor: pointer; }
+    .toast button:focus-visible { outline-color: var(--page); }
+    .noscript { margin: 16px 24px; padding: 12px 14px; }
+
+    /* ---------- Smaller screens ---------- */
+    @media (max-width: 1200px) {
+      .tile .k-value { font-size: 22px; }
+    }
+    @media (max-width: 960px) {
+      .wrap { padding: 0 14px; }
+      .layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .mini { display: grid; }
+    }
+    @media (max-width: 640px) {
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .totals { grid-template-columns: minmax(0, 1fr); }
+      .tornado { --name: 40%; --figure: 52px; }
+      .fig-head { flex-wrap: wrap; }
+      h3 .hint { display: block; margin-left: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; scroll-behavior: auto !important; }
+    }
+  </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header Section -->
-        <div class="header">
-            <h1 class="mb-2" style="font-size: 1.5rem;">Pavel's Financial Simulator for New Trial Units</h1>
-            <div class="last-updated">Last Updated: November 27, 2024</div>
-        </div>
-
-        <!-- Main Content Wrapper -->
-        <div class="content-wrapper">
-
-      
-<!-- Sidebar -->
-<div class="sidebar-container">
-    <div id="sidebar">
-        <!-- Main simulation control -->
-        <button id="calculate" class="btn btn-primary btn-sm w-100 mb-2">Run Simulation</button>
-
-        <!-- Simulation Duration Section -->
-        <div class="section-header">Simulation Duration</div>
-        <div class="form-group">
-            <label for="total_months">Total simulation months
-                <span id="total_months_value" class="value-display">60</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="total_months" min="12" max="60" value="60" step="1">
-        </div>
-
-        <!-- Startup and Closeout Section -->
-        <div class="section-header">Startup and Closeout</div>
-        <div class="form-group">
-            <label for="startup_revenue">Revenue per study initiation
-                <span id="startup_revenue_value" class="value-display">$4,000</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="startup_revenue" min="0" max="10000" value="4000" step="500">
-        </div>
-        <div class="form-group">
-            <label for="startup_cost">Cost per study initiation
-                <span id="startup_cost_value" class="value-display">$3,500</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="startup_cost" min="0" max="10000" value="3500" step="500">
-        </div>
-        <div class="form-group">
-            <label for="closeout_revenue">Revenue per study closeout
-                <span id="closeout_revenue_value" class="value-display">$4,000</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="closeout_revenue" min="0" max="10000" value="4000" step="500">
-        </div>
-        <div class="form-group">
-            <label for="closeout_cost">Cost per study closeout
-                <span id="closeout_cost_value" class="value-display">$3,500</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="closeout_cost" min="0" max="10000" value="3500" step="500">
-        </div>
-        <div class="form-group">
-            <label for="new_studies_per_year">New studies per year
-                <span id="new_studies_per_year_value" class="value-display">4</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="new_studies_per_year" min="1" max="20" value="4" step="1">
-        </div>
-
-        <!-- Trial Parameters Section -->
-        <div class="section-header">Trial Parameters</div>
-        <div class="form-group">
-            <label for="study_duration">Study duration (months)
-                <span id="study_duration_value" class="value-display">24</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="study_duration" min="1" max="60" value="24" step="1">
-        </div>
-        <div class="form-group">
-            <label for="per_patient_payment">Per patient payment
-                <span id="per_patient_payment_value" class="value-display">$30,000</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="per_patient_payment" min="0" max="50000" value="30000" step="1000">
-        </div>
-        <div class="form-group">
-            <label for="per_patient_expense">Per patient expenses (other than staff costs)
-                <span id="per_patient_expense_value" class="value-display">$10,000</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="per_patient_expense" min="0" max="20000" value="10000" step="500">
-        </div>
-        <div class="form-group">
-            <label for="patients_per_month">Patients recruited per study per month
-                <span id="patients_per_month_value" class="value-display">0.3</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="patients_per_month" min="0" max="5" value="0.3" step="0.1">
-        </div>
-
-        <!-- Financial Parameters Section -->
-        <div class="section-header">Financial Parameters</div>
-        <div class="form-group">
-            <label for="inflation_rate">Annual inflation rate
-                <span id="inflation_rate_value" class="value-display">3%</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="inflation_rate" min="0" max="10" value="3" step="0.5">
-        </div>
-        <div class="form-group">
-            <label for="fixed_costs">Monthly fixed costs
-                <span id="fixed_costs_value" class="value-display">$0</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="fixed_costs" min="0" max="50000" value="0" step="1000">
-        </div>
-        <div class="form-group">
-            <label for="institute_overhead">Institutional overhead
-                <span id="institute_overhead_value" class="value-display">30%</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="institute_overhead" min="0" max="50" value="30" step="1">
-        </div>
-
-        <!-- Staffing Parameters Section -->
-        <div class="section-header">Staffing Parameters</div>
-        
-        <div class="form-group">
-            <label for="ra_salary">Monthly research assistant salary
-                <span id="ra_salary_value" class="value-display">$4,000</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="ra_salary" min="0" max="10000" value="4000" step="500">
-        </div>
-        <div class="form-group">
-            <label for="coordinator_salary">Monthly coordinator salary
-                <span id="coordinator_salary_value" class="value-display">$5,500</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="coordinator_salary" min="0" max="15000" value="5500" step="500">
-        </div>
-        <div class="form-group">
-            <label for="studies_per_ra">Number of studies per research assistant
-                <span id="studies_per_ra_value" class="value-display">5</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="studies_per_ra" min="1" max="10" value="5" step="0.5">
-        </div>
-        <div class="form-group">
-            <label for="studies_per_coordinator">Number of studies per coordinator
-                <span id="studies_per_coordinator_value" class="value-display">10</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="studies_per_coordinator" min="1" max="15" value="10" step="0.5">
-        </div>
-        <div class="form-group">
-            <label for="annual_raise">Annual raise (above inflation)
-                <span id="annual_raise_value" class="value-display">2%</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="annual_raise" min="0" max="10" value="2" step="0.5">
-        </div>
-        <div class="form-group">
-            <label for="benefits_rate">Benefits rate (% of salary)
-                <span id="benefits_rate_value" class="value-display">30%</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="benefits_rate" min="0" max="50" value="30" step="1">
-        </div>
-        <div class="form-group">
-            <label for="severance_rate">Severance accrual rate (% of salary + benefits)
-                <span id="severance_rate_value" class="value-display">5%</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="severance_rate" min="0" max="20" value="5" step="0.5">
-        </div>
-        <div class="form-group">
-            <label for="admin_premium">Admin costs per staff member, per year
-                <span id="admin_premium_value" class="value-display">$5,000</span>
-            </label>
-            <input type="range" class="form-control-range slider" id="admin_premium" min="0" max="10000" value="5000" step="500">
-        </div>
-        
-        <!-- Fractional Staff Toggle -->
-        <div class="form-group">
-            <div class="custom-control custom-switch">
-                <input type="checkbox" class="custom-control-input" id="allow_fractional_staff">
-                <label class="custom-control-label" for="allow_fractional_staff">Enable fractional staff hiring</label>
-            </div>
-        </div>
-        <small class="form-text text-muted">When enabled, staff can be hired in fractional amounts (e.g., 0.5 FTE) depending on the number of active studies, as in a shared staffing model. The default is hiring whole staff only.</small>
+  <header class="wrap app-header">
+    <div>
+      <h1>Pavel's financial simulator for new trial units</h1>
+      <p class="lede">Forecast the revenue, costs and staffing of a new clinical trial unit. The results update as you change the assumptions.</p>
     </div>
-</div>
-
-<!-- Main Content Area -->
-<div class="main-content">
-    <!-- Tabs Navigation -->
-    <ul class="nav nav-tabs mb-3" id="resultTabs" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" id="key-metrics-tab" data-toggle="tab" href="#key-metrics" role="tab">Summary</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="yearly-breakdown-tab" data-toggle="tab" href="#yearly-breakdown" role="tab">Yearly Breakdown</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="cash-flow-tab" data-toggle="tab" href="#cash-flow" role="tab">Cash Flow Plot</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="staffing-levels-tab" data-toggle="tab" href="#staffing-levels" role="tab">Staffing Levels Plot</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="staff-costs-tab" data-toggle="tab" href="#staff-costs" role="tab">Staff Costs Plot</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="explanations-tab" data-toggle="tab" href="#explanations" role="tab">Definitions</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="calculations-tab" data-toggle="tab" href="#calculations" role="tab">Explanations</a>
-        </li>
-    </ul>
-
-    <!-- Tab Content -->
-    <div class="tab-content" id="resultTabsContent">
-        <div class="tab-pane fade show active" id="key-metrics" role="tabpanel">
-            <h4 class="mt-3"><span id="forecast-title"></span></h4>
-            <div id="metrics_table"></div>
-        </div>
-        
-        <div class="tab-pane fade" id="yearly-breakdown" role="tabpanel">
-            <h4 class="mt-3">End-of-Year Reports</h4>
-            <div id="yearly_breakdown_table"></div>
-        </div>
-        
-        <div class="tab-pane fade" id="cash-flow" role="tabpanel">
-            <h4 class="mt-3">Cash Flow Over Time</h4>
-            <div id="cash_flow_plot" class="plot-container"></div>
-        </div>
-        
-        <div class="tab-pane fade" id="staffing-levels" role="tabpanel">
-            <h4 class="mt-3">Staffing Levels Over Time</h4>
-            <div id="staffing_levels_plot" class="plot-container"></div>
-        </div>
-        
-        <div class="tab-pane fade" id="staff-costs" role="tabpanel">
-            <h4 class="mt-3">Staff Costs Over Time</h4>
-            <div id="staff_costs_plot" class="plot-container"></div>
-        </div>
-        
-        <div class="tab-pane fade" id="explanations" role="tabpanel">
-            <h4 class="mt-3">Definitions</h4>
-            <div id="explanations-content">
-                <p><strong>Startup and closeout parameters:</strong></p>
-                <ul>
-                    <li><strong>Revenue per startup ($):</strong> The amount received for initiating a new study.</li>
-                    <li><strong>Cost per startup ($):</strong> The cost incurred to start a new study.</li>
-                    <li><strong>Revenue per closeout ($):</strong> The amount received when closing out a study.</li>
-                    <li><strong>Cost per closeout ($):</strong> The cost incurred when closing out a study.</li>
-                    <li><strong>New studies per year:</strong> The number of new studies started each year.</li>
-                </ul>
-                <p><strong>Trial parameters:</strong></p>
-                <ul>
-                    <li><strong>Study duration (months):</strong> The expected duration of each study.</li>
-                    <li><strong>Per patient payment ($):</strong> The amount received for each patient enrolled in a study.</li>
-                    <li><strong>Per patient expense ($):</strong> The cost incurred for each patient enrolled, excluding staff costs.</li>
-                    <li><strong>Monthly recruitment rate per study (patients):</strong> The average number of patients recruited per study per month.</li>
-                </ul>
-                <p><strong>Financial parameters:</strong></p>
-                <ul>
-                    <li><strong>Inflation rate (%):</strong> The expected annual inflation rate.</li>
-                    <li><strong>Fixed costs ($):</strong> Monthly fixed costs such as rent and utilities.</li>
-                    <li><strong>Institute overhead (%):</strong> The percentage of revenue taken by the institute from the top-line study budget.</li>
-                </ul>
-                <p><strong>Staffing parameters:</strong></p>
-                <ul>
-                    <li><strong>Average number of studies that an RA can support:</strong> The typical number of concurrent studies that one research assistant can effectively manage.</li>
-                    <li><strong>Average number of studies a coordinator can support:</strong> The typical number of concurrent studies that one coordinator can effectively manage.</li>
-                    <li><strong>Base monthly salary per RA ($):</strong> The base salary for research assistants.</li>
-                    <li><strong>Base monthly salary per coordinator ($):</strong> The base salary for coordinators.</li>
-                    <li><strong>Annual raise (%):</strong> The annual salary increase percentage for staff beyond inflation.</li>
-                    <li><strong>Staff benefits rate (% of salary):</strong> The percentage added to staff salaries to cover benefits.</li>
-                    <li><strong>Severance accrual rate (% of salary + benefits):</strong> The percentage of salaries set aside monthly for severance costs.</li>
-                    <li><strong>Administrative premium per staff member ($):</strong> Annual overhead cost per staff member to account for various realities of managing more people. Increases with inflation.</li>
-                </ul>
-                <p><strong>Simulation parameters:</strong></p>
-                <ul>
-                    <li><strong>Total simulation duration (months):</strong> The total time period over which the simulation runs.</li>
-                </ul>
-                <p><strong>Financial calculations:</strong></p>
-                <ul>
-                    <li><strong>Total revenue:</strong> Sum of startup revenue, trial revenue, and closeout revenue, adjusted for institute overhead and inflation.</li>
-                    <li><strong>Total costs:</strong> Includes startup costs, fixed costs, staff costs (including benefits and severance accrual), per-patient expenses, and closeout costs, adjusted for inflation.</li>
-                    <li><strong>Net profit:</strong> Calculated as total revenue minus total costs.</li>
-                </ul>
-                <p><strong>Staffing constraints:</strong></p>
-                <ul>
-                    <li>Staff are hired in whole numbers (integer increments) unless fractional staff hiring is enabled.</li>
-                    <li>Once staff are hired, they remain employed. Staff numbers do not decrease even if workload decreases.</li>
-                    <li>Staff costs are calculated based on the number of staff employed each month, adjusted for annual raises, benefits, and cost variability.</li>
-                </ul>
-            </div>
-        </div>
-        <div class="tab-pane fade" id="calculations" role="tabpanel">
-            <h4 class="mt-3">Financial Calculations Explained</h4>
-            
-            <div class="card mb-4">
-                <div class="card-header">
-                    Study Flow and Patient Calculations
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">Basic Study Progression</h5>
-                    <p>Each month, the unit starts a fraction of its yearly study target:</p>
-                    <pre class="bg-light p-3">
-        Monthly New Studies = Annual Study Target ÷ 12
-        
-        Active Studies(Month M) = Sum of Studies Started(Months 1 to M) - Studies Completed(through Month M)
-        Studies Completed(Month M) = Studies Started(Month M - Study Duration)</pre>
-                    
-                    <h5 class="card-title mt-4">Patient Recruitment</h5>
-                    <p>Patient recruitment scales linearly with active studies:</p>
-                    <pre class="bg-light p-3">
-        Monthly Patients = Active Studies × Patients per Study per Month</pre>
-                </div>
-            </div>
-        
-            <div class="card mb-4">
-                <div class="card-header">
-                    Revenue Calculations
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">Base Revenue Components</h5>
-                    <p>Revenue comes from three sources, before adjustments:</p>
-                    <pre class="bg-light p-3">
-        Monthly Start Revenue = Monthly New Studies × Revenue per Study Start
-        Monthly Patient Revenue = Active Studies × Patients per Study per Month × Revenue per Patient
-        Monthly Close Revenue = Completed Studies this Month × Revenue per Study Close</pre>
-        
-                    <h5 class="card-title mt-4">Annual Adjustments</h5>
-                    <p>All revenue and costs are adjusted for inflation each year:</p>
-                    <pre class="bg-light p-3">
-        Inflation Factor(Year N) = (1 + Annual Inflation Rate)^(N-1)
-        
-        Example with 3% inflation:
-        Year 1: (1.03)^0 = 1.00
-        Year 2: (1.03)^1 = 1.03
-        Year 3: (1.03)^2 = 1.0609</pre>
-        
-                    <h5 class="card-title mt-4">Final Revenue</h5>
-                    <p>Institution overhead is deducted from all revenue:</p>
-                    <pre class="bg-light p-3">
-        Adjusted Revenue = Base Revenue × Inflation Factor × (1 - Institution Overhead Rate)</pre>
-                </div>
-            </div>
-        
-            <div class="card mb-4">
-                <div class="card-header">
-                    Staff Calculations
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">Required Staff Levels</h5>
-                    <p>Staff requirements are based on active studies:</p>
-                    <pre class="bg-light p-3">
-        Required RAs = Active Studies ÷ Studies per RA
-        Required Coordinators = Active Studies ÷ Studies per Coordinator
-        
-        If Fractional Staff Not Allowed:
-            Round these numbers up to next whole number</pre>
-        
-                    <h5 class="card-title mt-4">Staff Salary Adjustments</h5>
-                    <p>Salaries increase with both raises and inflation:</p>
-                    <pre class="bg-light p-3">
-        Adjusted Salary(Year N) = Base Salary × (1 + Annual Raise Rate)^(N-1) × (1 + Inflation Rate)^(N-1)
-        
-        Example with 2% raise and 3% inflation:
-        Year 1: Base × (1.02)^0 × (1.03)^0 = Base
-        Year 2: Base × (1.02)^1 × (1.03)^1 = Base × 1.0506
-        Year 3: Base × (1.02)^2 × (1.03)^2 = Base × 1.1033</pre>
-        
-                    <h5 class="card-title mt-4">Total Staff Cost Components</h5>
-                    <pre class="bg-light p-3">
-        Base Staff Cost = Number of RAs × RA Salary + Number of Coordinators × Coordinator Salary
-        Benefits Cost = Base Staff Cost × Benefits Rate
-        Severance Accrual = Base Staff Cost × (1 + Benefits Rate) × Severance Rate
-        Staff Management Cost = Total Staff Count × (Annual Management Cost ÷ 12) × Inflation Factor
-        
-        Total Staff Cost = Base Staff Cost + Benefits Cost + Severance Accrual + Staff Management Cost</pre>
-                </div>
-            </div>
-        
-            <div class="card mb-4">
-                <div class="card-header">
-                    Other Cost Calculations
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">Study-Related Costs</h5>
-                    <pre class="bg-light p-3">
-        Monthly Start Costs = Monthly New Studies × Cost per Study Start × Inflation Factor
-        Monthly Patient Costs = Monthly New Patients × Cost per Patient × Inflation Factor
-        Monthly Close Costs = Completed Studies × Cost per Study Close × Inflation Factor</pre>
-        
-                    <h5 class="card-title mt-4">Fixed Operational Costs</h5>
-                    <pre class="bg-light p-3">
-        Monthly Fixed Costs = Base Fixed Costs × Inflation Factor</pre>
-                </div>
-            </div>
-        
-            <div class="card mb-4">
-                <div class="card-header">
-                    Final Financial Calculations
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">Monthly Calculations</h5>
-                    <pre class="bg-light p-3">
-        Monthly Total Revenue = Start Revenue + Patient Revenue + Close Revenue
-        Monthly Total Costs = Staff Costs + Study Costs + Patient Costs + Fixed Costs
-        Monthly Net Profit = Monthly Total Revenue - Monthly Total Costs</pre>
-        
-                    <h5 class="card-title mt-4">Cumulative Position</h5>
-                    <pre class="bg-light p-3">
-        Cumulative Net Profit(Month M) = Sum of Monthly Net Profit(Months 1 to M)</pre>
-                </div>
-            </div>
-        
-            <div class="card mb-4">
-                <div class="card-header">
-                    Important Rules and Constraints
-                </div>
-                <div class="card-body">
-                    <ol>
-                        <li>All inflation and raise adjustments occur annually, not monthly</li>
-                        <li>Staff numbers can only increase, never decrease</li>
-                        <li>Institution overhead is deducted from revenue before any other calculations</li>
-                        <li>Severance accrual is calculated on salary plus benefits</li>
-                        <li>All monetary values are adjusted for inflation starting in Year 2</li>
-                    </ol>
-        
-                    <h5 class="card-title mt-4">Example Timeline</h5>
-                    <p>For a unit starting in January 2024:</p>
-                    <ul>
-                        <li>Months 1-12 (2024): Base values only</li>
-                        <li>Months 13-24 (2025): First inflation and raise adjustments</li>
-                        <li>Months 25-36 (2026): Second year of compound adjustments</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+    <div class="actions">
+      <button type="button" class="btn" id="copy-link">Copy link</button>
+      <button type="button" class="btn" id="download-csv">Download CSV</button>
     </div>
-</div>
-</div>
-</div>
+  </header>
 
+  <!-- Repeats the headline figures for small screens, so screen readers skip it. -->
+  <div class="mini" id="mini" aria-hidden="true"></div>
 
-                
-        <!-- Custom JavaScript -->
-        <script>
-            // Wait for the DOM to load
-            $(document).ready(function () {
-                // Update slider values on input
-                $('.slider').on('input', function () {
-    let id = $(this).attr('id');
-    let value = parseFloat($(this).val());
-    let display = '';
+  <noscript><p class="card noscript">This simulator needs JavaScript. Turn it on in your browser and reload the page.</p></noscript>
 
-    // Determine how to format the display based on slider ID
-    if (id.includes('rate') || id.includes('overhead') || id.includes('benefits') || id.includes('severance') || id.includes('raise')) {
-        display = value + '%';
-    } else if (id.includes('salary') || id.includes('cost') || id.includes('revenue') || id.includes('payment') || id.includes('expense') || id.includes('premium')) {
-        display = '$' + Number(value).toLocaleString();
-    } else {
-        display = value;
-    }
+  <div class="wrap layout">
+    <aside class="card inputs" aria-labelledby="inputs-title">
+      <div class="inputs-head">
+        <h2 id="inputs-title">Assumptions</h2>
+        <button type="button" class="btn quiet" id="reset">Reset to defaults</button>
+      </div>
+      <div id="inputs"></div>
+    </aside>
 
-    $('#' + id + '_value').text(display);
-});
+    <main class="results" id="results">
+      <h2 class="sr-only">Results</h2>
+      <section aria-label="Headline figures">
+        <dl class="kpis" id="kpis"></dl>
+      </section>
 
-                // Trigger input event to initialize display values
-                $('.slider').each(function () {
-                    $(this).trigger('input');
-                });
+      <div class="tabs" id="tabs" role="tablist" aria-label="Results">
+        <button type="button" class="tab" role="tab" id="tab-overview" data-tab="overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
+        <button type="button" class="tab" role="tab" id="tab-costs" data-tab="costs" aria-controls="panel-costs" aria-selected="false" tabindex="-1">Revenue and costs</button>
+        <button type="button" class="tab" role="tab" id="tab-staffing" data-tab="staffing" aria-controls="panel-staffing" aria-selected="false" tabindex="-1">Staffing</button>
+        <button type="button" class="tab" role="tab" id="tab-sensitivity" data-tab="sensitivity" aria-controls="panel-sensitivity" aria-selected="false" tabindex="-1">Sensitivity</button>
+        <button type="button" class="tab" role="tab" id="tab-yearly" data-tab="yearly" aria-controls="panel-yearly" aria-selected="false" tabindex="-1">Yearly breakdown</button>
+        <button type="button" class="tab" role="tab" id="tab-monthly" data-tab="monthly" aria-controls="panel-monthly" aria-selected="false" tabindex="-1">Monthly detail</button>
+        <button type="button" class="tab" role="tab" id="tab-about" data-tab="about" aria-controls="panel-about" aria-selected="false" tabindex="-1">How it works</button>
+      </div>
 
-                // Run simulation on button click
-                $('#calculate').click(function () {
-                    runSimulation();
-                });
+      <section class="panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div class="card block" id="chart-cumulative"></div>
+        <div class="card block" id="chart-monthly"></div>
+      </section>
 
-                // Function to format currency
-                function formatCurrency(value) {
-                    return '$' + Math.round(value).toLocaleString();
-                }
+      <section class="panel" id="panel-costs" role="tabpanel" aria-labelledby="tab-costs" tabindex="0" hidden>
+        <div class="card block" id="chart-costs"></div>
+      </section>
 
-                // Function to format percentage
-                function formatPercent(value) {
-                    return value.toFixed(1) + '%';
-                }
+      <section class="panel" id="panel-staffing" role="tabpanel" aria-labelledby="tab-staffing" tabindex="0" hidden>
+        <div class="card block" id="chart-headcount"></div>
+        <div class="card block" id="chart-staffcosts"></div>
+      </section>
 
-                function calculateEffectiveMonthlyRate(annualRate) {
-    return Math.pow(1 + annualRate / 100, 1/12) - 1;
-}
+      <section class="panel" id="panel-sensitivity" role="tabpanel" aria-labelledby="tab-sensitivity" tabindex="0" hidden>
+        <div class="card block" id="sensitivity"></div>
+      </section>
 
+      <section class="panel" id="panel-yearly" role="tabpanel" aria-labelledby="tab-yearly" tabindex="0" hidden>
+        <div class="card block">
+          <div class="fig-head"><h3>End-of-year reports</h3></div>
+          <section class="table-scroll" id="yearly" tabindex="0" aria-label="End-of-year reports"></section>
+        </div>
+        <div class="card block">
+          <div class="fig-head"><h3>Totals over the forecast</h3></div>
+          <div class="totals" id="totals"></div>
+        </div>
+      </section>
 
-                // Function to perform calculations
-                function calculateFinancials(params) {
-    // Create month array
-    const months = Array.from({length: params.total_months}, (_, i) => i + 1);
-    const years_since_start = months.map(m => Math.floor((m - 1) / 12));
+      <section class="panel" id="panel-monthly" role="tabpanel" aria-labelledby="tab-monthly" tabindex="0" hidden>
+        <div class="card block">
+          <div class="fig-head">
+            <h3>Month-by-month figures <span class="hint">The CSV file adds every revenue and cost line.</span></h3>
+            <button type="button" class="btn quiet" id="download-csv-2">Download CSV</button>
+          </div>
+          <section class="table-scroll" id="monthly" tabindex="0" aria-label="Month-by-month figures"></section>
+        </div>
+      </section>
 
-    // Calculate inflation adjustments - changed to use annual steps
-    const inflation_adjustments = months.map(m => 
-    Math.pow(1 + params.inflation_rate / 100, Math.max(0, Math.floor((m - 1) / 12) - 1))
-);
+      <section class="panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about" tabindex="0" hidden>
+        <div class="card prose">
+          <h3>What the simulator does</h3>
+          <p>The simulator forecasts the monthly revenue, costs and staffing of a new clinical trial unit. It starts new studies at a steady rate, recruits patients into every active study, hires staff as the number of active studies grows, and adds up the result month by month.</p>
+          <p>Change any assumption and every figure, chart and table updates. Copy link saves the current assumptions in a web address that you can share.</p>
 
-                    // Here I used to have variability adjustments that I ultimately removed; could add again.
-                    const adjusted_recruitment_rate = params.patients_per_month;
-                    const adjusted_fixed_costs = params.fixed_costs;
-                    const adjusted_startup_cost = params.startup_cost;
-                    const adjusted_closeout_cost = params.closeout_cost;
-                    const adjusted_per_patient_expense = params.per_patient_expense;
-                
+          <h3>Headline figures</h3>
+          <dl class="defs">
+            <dt>Net profit</dt>
+            <dd>Revenue after institutional overhead, minus all costs, added up over the forecast.</dd>
+            <dt>Break-even</dt>
+            <dd>The first month from which cumulative net profit stays at or above zero until the end of the forecast.</dd>
+            <dt>Funding needed</dt>
+            <dd>The largest cumulative loss during the forecast. The unit must cover this amount from other sources before it pays for itself.</dd>
+            <dt>Net profit, final 12 months</dt>
+            <dd>Net profit over the last 12 months of the forecast.</dd>
+          </dl>
 
-                    // Monthly new studies (fractional)
-                    const monthly_new_studies = params.new_studies_per_year / 12;
+          <h3>Assumptions</h3>
+          <div id="definitions"></div>
 
-                    // Study lifecycle calculations
-                    const studies_started = months.map(m => monthly_new_studies);
-                    const studies_started_cumulative = [];
-                    studies_started.reduce((acc, val, idx) => {
-                        acc += val;
-                        studies_started_cumulative.push(acc);
-                        return acc;
-                    }, 0);
+          <h3>Calculations</h3>
+          <h4>Studies and patients</h4>
+          <div class="formula">
+            <p>New studies per month = New studies per year ÷ 12</p>
+            <p>Active studies in month M = New studies per month × (M or the study duration, whichever is smaller)</p>
+            <p>Studies closed in month M = New studies per month, once M is greater than the study duration</p>
+            <p>Patients recruited = Active studies × Patients recruited per study per month</p>
+          </div>
 
-                    const studies_completed = studies_started_cumulative.map((val, idx) => 
-                        Math.max(0, val - (monthly_new_studies * params.study_duration))
-                    );
+          <h4>Inflation and raises</h4>
+          <p>Both change once a year. Year 1 covers months 1 to 12, year 2 covers months 13 to 24, and so on.</p>
+          <div class="formula">
+            <p>Inflation factor in year N = (1 + Annual inflation rate) ^ (N − 1)</p>
+            <p>Salary factor in year N = Inflation factor × (1 + Annual raise) ^ (N − 1)</p>
+            <p class="gap">With 3% inflation and a 2% raise:</p>
+            <p>Year 1: inflation factor 1.0000, salary factor 1.0000</p>
+            <p>Year 2: inflation factor 1.0300, salary factor 1.0506</p>
+            <p>Year 3: inflation factor 1.0609, salary factor 1.1038</p>
+          </div>
 
-                    const studies_completed_this_month = studies_completed.map((val, idx) => 
-                        idx === 0 ? val : val - studies_completed[idx - 1]
-                    );
+          <h4>Revenue</h4>
+          <div class="formula">
+            <p>Revenue before overhead = (New studies × Revenue per study initiation + Patients recruited × Per patient payment + Studies closed × Revenue per study closeout) × Inflation factor</p>
+            <p>Institutional overhead = Revenue before overhead × Institutional overhead rate</p>
+            <p>Revenue = Revenue before overhead − Institutional overhead</p>
+          </div>
 
-                    const active_studies = studies_started_cumulative.map((val, idx) => 
-                        val - studies_completed[idx]
-                    );
+          <h4>Staff</h4>
+          <div class="formula">
+            <p>Research assistants = Active studies ÷ Studies per research assistant</p>
+            <p>Coordinators = Active studies ÷ Studies per coordinator</p>
+            <p>Both are rounded up to whole positions unless fractional staff is allowed.</p>
+            <p class="gap">Salaries and benefits = Staff × Monthly salary × Salary factor × (1 + Benefits rate)</p>
+            <p>Severance accrual = Salaries and benefits × Severance accrual rate</p>
+            <p>Staff administration = Staff × (Admin costs per staff member ÷ 12) × Inflation factor</p>
+            <p>Staff costs = Salaries and benefits + Severance accrual + Staff administration</p>
+          </div>
 
-                    // Staffing calculations with fractional toggle
-    const required_num_ras = active_studies.map(s => 
-        params.allow_fractional_staff ? 
-            s * params.ras_per_study : 
-            Math.ceil(s * params.ras_per_study)
-    );
-    
-    const required_num_coordinators = active_studies.map(s => 
-        params.allow_fractional_staff ? 
-            s * params.coordinators_per_study : 
-            Math.ceil(s * params.coordinators_per_study)
-    );
+          <h4>Other costs</h4>
+          <div class="formula">
+            <p>Study initiation costs = New studies × Cost per study initiation × Inflation factor</p>
+            <p>Per patient expenses = Patients recruited × Per patient expenses × Inflation factor</p>
+            <p>Study closeout costs = Studies closed × Cost per study closeout × Inflation factor</p>
+            <p>Fixed costs = Monthly fixed costs × Inflation factor</p>
+          </div>
 
-    // Staff employment (no-decrease constraint)
-    const num_ras_employed = [];
-    const num_coordinators_employed = [];
-    let max_ras = 0;
-    let max_coordinators = 0;
-    for (let i = 0; i < months.length; i++) {
-        max_ras = Math.max(max_ras, required_num_ras[i]);
-        max_coordinators = Math.max(max_coordinators, required_num_coordinators[i]);
-        num_ras_employed.push(max_ras);
-        num_coordinators_employed.push(max_coordinators);
-    }
+          <h4>Profit</h4>
+          <div class="formula">
+            <p>Net profit = Revenue − Staff costs − Other costs</p>
+            <p>Cumulative net profit in month M = Net profit of months 1 to M added together</p>
+          </div>
 
-// Salary calculations with both inflation and annual raises
-const ra_salary_monthly = years_since_start.map((y, idx) => {
-    // Start with base salary
-    let salary = params.ra_salary;
-    
-    // Apply raises starting from year 2
-    // y is 0-based, so y=0 is year 1, y=1 is year 2, etc.
-    const raiseYears = Math.max(0, y);
-    const raiseMultiplier = Math.pow(1 + params.annual_raise / 100, raiseYears);
-    salary *= raiseMultiplier;
-    
-    // Apply inflation starting from year 2
-    // We use Math.max(0, y) for the same reason
-    const inflationYears = Math.max(0, y);
-    const inflationMultiplier = Math.pow(1 + params.inflation_rate / 100, inflationYears);
-    salary *= inflationMultiplier;
-    
-    return salary;
-});
+          <h3>What the model assumes</h3>
+          <ul>
+            <li>New studies start at a constant rate, so the model counts fractions of a study. Four studies per year is one third of a study each month.</li>
+            <li>Every active study recruits at the same rate for its whole duration.</li>
+            <li>The unit earns the per patient payment, and pays the per patient expenses, in the month it recruits the patient.</li>
+            <li>The institution takes its overhead from all revenue before the unit receives it.</li>
+            <li>Inflation and raises take effect once a year, from the first month of year 2.</li>
+            <li>Staff numbers never fall during the forecast.</li>
+            <li>Severance accrual counts as a staff cost in the month the unit sets it aside.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
 
-const coordinator_salary_monthly = years_since_start.map((y, idx) => {
-    // Same logic for coordinators
-    let salary = params.coordinator_salary;
-    
-    const raiseYears = Math.max(0, y);
-    const raiseMultiplier = Math.pow(1 + params.annual_raise / 100, raiseYears);
-    salary *= raiseMultiplier;
-    
-    const inflationYears = Math.max(0, y);
-    const inflationMultiplier = Math.pow(1 + params.inflation_rate / 100, inflationYears);
-    salary *= inflationMultiplier;
-    
-    return salary;
-});
+  <footer class="wrap app-footer">Last updated November 20, 2026</footer>
+  <div class="toast" id="toast" role="status" hidden></div>
 
-                    // Staff costs with benefits
-                    const base_ra_costs_monthly = num_ras_employed.map((n, i) => n * ra_salary_monthly[i]);
-                    const base_coordinator_costs_monthly = num_coordinators_employed.map((n, i) => n * coordinator_salary_monthly[i]);
-                    const benefits_multiplier = 1 + params.benefits_rate / 100;
-                    const ra_costs_monthly = base_ra_costs_monthly.map(c => c * benefits_multiplier);
-                    const coordinator_costs_monthly = base_coordinator_costs_monthly.map(c => c * benefits_multiplier);
-                     
-                    //administrative premium
-                    const total_staff_monthly = num_ras_employed.map((ras, i) => ras + num_coordinators_employed[i]);
-                    const admin_premium_monthly = total_staff_monthly.map((staff, i) => 
-                     (params.admin_premium / 12) * staff * inflation_adjustments[i]
-                    );
+  <!-- =====================================================================
+       MODEL. Pure calculations with no access to the page, so the numbers
+       can be checked on their own. Everything shown comes from simulate().
+       ===================================================================== -->
+  <script id="model">
+  (function (root) {
+    'use strict';
 
-                    const staff_costs_monthly = ra_costs_monthly.map((c, i) => c + coordinator_costs_monthly[i] + admin_premium_monthly[i]);
-
-
-                    // Severance accrual (based on salary + benefits)
-                    const severance_cost_monthly = ra_costs_monthly.map((c, i) => 
-    (c + coordinator_costs_monthly[i]) * (params.severance_rate / 100)
-);
-
-                    // Institute overhead rate
-                    const institute_overhead_rate = params.institute_overhead / 100;
-
-                    // Startup revenue and costs
-
-const startup_revenue_monthly_pre_overhead = studies_started.map((n, idx) => 
-    params.startup_revenue * n * inflation_adjustments[idx]  // Apply inflation first
-);
-const startup_revenue_monthly = startup_revenue_monthly_pre_overhead.map(r => 
-    r * (1 - institute_overhead_rate)  // Then take overhead cut
-);
-                    const startup_costs_monthly = studies_started.map((n, idx) => 
-                        adjusted_startup_cost * n * inflation_adjustments[idx]
-                    );
-
-                    // Closeout revenue and costs
-                    const closeout_revenue_monthly_pre_overhead = studies_completed_this_month.map((n, idx) => 
-    params.closeout_revenue * n * inflation_adjustments[idx]  // Apply inflation first
-);
-const closeout_revenue_monthly = closeout_revenue_monthly_pre_overhead.map(r => 
-    r * (1 - institute_overhead_rate)  // Then take overhead cut
-);
-
-                    const closeout_costs_monthly = studies_completed_this_month.map((n, idx) => 
-                        adjusted_closeout_cost * n * inflation_adjustments[idx]
-                    );
-
-                    // Trial revenue
-                    const trial_revenue_monthly_pre_overhead = active_studies.map((s, idx) => 
-    params.per_patient_payment * adjusted_recruitment_rate * s * inflation_adjustments[idx]  // Apply inflation first
-);
-const trial_revenue_monthly = trial_revenue_monthly_pre_overhead.map(r => 
-    r * (1 - institute_overhead_rate)  // Then take overhead cut
-);
-
-                    // Per-patient expenses
-                    const total_patients_recruited = active_studies.map((s, idx) => 
-                        adjusted_recruitment_rate * s
-                    );
-                    const per_patient_expenses_monthly = total_patients_recruited.map((n, idx) => 
-                        n * adjusted_per_patient_expense * inflation_adjustments[idx]
-                    );
-
-                    // Total revenue
-                    const total_revenue_monthly = startup_revenue_monthly.map((r, i) => 
-                        r + trial_revenue_monthly[i] + closeout_revenue_monthly[i]
-                    );
-
-                    // Total overhead deducted
-                    const total_overhead_deducted_monthly = startup_revenue_monthly_pre_overhead.map((r, i) =>
-                        (r + trial_revenue_monthly_pre_overhead[i] + closeout_revenue_monthly_pre_overhead[i]) * institute_overhead_rate * inflation_adjustments[i]
-                    );
-
-                    // Fixed costs with inflation
-                    const fixed_costs_monthly = months.map((_, i) => 
-                        adjusted_fixed_costs * inflation_adjustments[i]
-                    );
-
-                    // Total costs
-                    const total_costs_monthly = startup_costs_monthly.map((c, i) =>
-                        c + fixed_costs_monthly[i] + staff_costs_monthly[i] + severance_cost_monthly[i] + per_patient_expenses_monthly[i] + closeout_costs_monthly[i]
-                    );
-
-                    // Net profit
-                    const net_profit_monthly = total_revenue_monthly.map((r, i) => r - total_costs_monthly[i]);
-
-                    // Cumulative net profit
-                    const cumulative_net_profit = [];
-                    net_profit_monthly.reduce((acc, curr, i) => {
-                        acc += curr;
-                        cumulative_net_profit[i] = acc;
-                        return acc;
-                    }, 0);
-
-                    // Cash flows that could be used for NPV and IRR calculation (which i decided to remove)
-                    const initial_investment = - (startup_costs_monthly[0] + fixed_costs_monthly[0] + staff_costs_monthly[0] + severance_cost_monthly[0] + per_patient_expenses_monthly[0] + closeout_costs_monthly[0]);
-                    const cash_flows = [initial_investment, ...net_profit_monthly];
-
-
-                    // Total patients recruited
-                    const total_patients = total_patients_recruited.reduce((a, b) => a + b, 0);
-
-                    // Total RA and Coordinator spend
-                    const total_ra_spend = ra_costs_monthly.reduce((a, b) => a + b, 0);
-                    const total_coordinator_spend = coordinator_costs_monthly.reduce((a, b) => a + b, 0);
-
-                    // Return results
-                    return {
-    months: months,
-    net_profit_monthly: net_profit_monthly,
-    cumulative_net_profit: cumulative_net_profit,
-    total_revenue: total_revenue_monthly.reduce((a, b) => a + b, 0),
-    total_costs: total_costs_monthly.reduce((a, b) => a + b, 0),
-    net_profit: net_profit_monthly.reduce((a, b) => a + b, 0),
-    total_revenue_monthly: total_revenue_monthly,
-    total_costs_monthly: total_costs_monthly,
-    staff_costs_monthly: staff_costs_monthly,
-    ra_costs_monthly: ra_costs_monthly,
-    coordinator_costs_monthly: coordinator_costs_monthly,
-    severance_cost_monthly: severance_cost_monthly,
-    admin_premium_monthly: admin_premium_monthly,
-    per_patient_expenses_monthly: per_patient_expenses_monthly,
-    active_studies: active_studies,
-    num_ras_employed: num_ras_employed,
-    num_coordinators_employed: num_coordinators_employed,
-    institute_overhead_monthly: total_overhead_deducted_monthly,
-    total_patients_recruited: total_patients_recruited.reduce((a, b) => a + b, 0),
-    total_ra_spend: total_ra_spend,
-    total_coordinator_spend: total_coordinator_spend,
-    params: params  // Add this line
-};
-                }
-
-            
-
-                // Function to render the cash flow plot
-                function renderCashFlowPlot(fin) {
-                    let data = [
-                        {
-                            x: fin.months,
-                            y: fin.net_profit_monthly,
-                            type: 'bar',
-                            name: 'Monthly Net Profit',
-                            marker: { color: '#1f77b4' }
-                        },
-                        {
-                            x: fin.months,
-                            y: fin.cumulative_net_profit,
-                            type: 'scatter',
-                            mode: 'lines',
-                            name: 'Cumulative Profit',
-                            line: { color: '#ff7f0e' }
-                        }
-                    ];
-                    let layout = {
-                        title: 'Cash Flow Over Time',
-                        xaxis: { title: 'Month' },
-                        yaxis: { title: 'Amount ($)' },
-                        hovermode: 'x unified',
-                        height: 400,
-                        width: 1200  
-                    };
-                    Plotly.newPlot('cash_flow_plot', data, layout, {responsive: true});
-                }
-
-                // Function to render staffing levels plot
-                function renderStaffingLevelsPlot(fin) {
-    let data = [
-        {
-            x: fin.months,
-            y: fin.num_ras_employed,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'RAs Employed',
-            line: { color: '#1f77b4' }
-        },
-        {
-            x: fin.months,
-            y: fin.num_coordinators_employed,
-            type: 'scatter',
-            mode: 'lines',
-            name: 'Coordinators Employed',
-            line: { color: '#ff7f0e' }
-        }
+    const GROUPS = [
+      { id: 'forecast', title: 'Forecast' },
+      { id: 'pipeline', title: 'Study pipeline' },
+      { id: 'budget', title: 'Study payments and costs' },
+      { id: 'finance', title: 'Finance' },
+      { id: 'staff', title: 'Staffing' }
     ];
-    
-    let layout = {
-        title: 'Staffing Levels Over Time',
-        xaxis: { title: 'Month' },
-        yaxis: { 
-            title: 'Number of Staff',
-            tickformat: fin.params?.allow_fractional_staff ? '.2f' : 'd'
-        },
-        hovermode: 'x unified',
-        height: 400,
-        width: 1200
-    };
-    
-    Plotly.newPlot('staffing_levels_plot', data, layout, {responsive: true});
-}
-// Function to aggregate monthly data into yearly summaries
-function calculateYearlyBreakdown(fin, params) {
-    const years = Math.ceil(params.total_months / 12);
-    const yearlyData = [];
-    let cumulativeProfit = 0;
-    
-    for (let year = 0; year < years; year++) {
-        const startMonth = year * 12;
-        const endMonth = Math.min((year + 1) * 12, params.total_months);
-        
-        const yearData = {
-            year: year + 1,
-            revenue: {
-                total: 0
-            },
-            costs: {
-                staff: 0,
-                other: 0,
-                total: 0
-            },
-            metrics: {
-                activeStudies: 0,
-                avgRAs: 0,
-                avgCoordinators: 0
-            },
-            profit: 0,
-            cumulativeProfit: 0
+
+    // One entry per input. The input panel, the definitions, the shared link
+    // and the sensitivity analysis are all built from this list.
+    //   kind      money | percent | count | toggle
+    //   min, max  range of the slider and of typed values
+    //   step      slider step
+    //   decimals  precision kept for typed values
+    //   def       default
+    //   hardMin, hardMax  limits the model itself needs (default: 0 and none)
+    const PARAMS = [
+      { key: 'total_months', group: 'forecast', label: 'Forecast length (months)', short: 'Forecast length', kind: 'count',
+        min: 12, max: 60, step: 1, decimals: 0, def: 60, whole: true, hardMin: 1, hardMax: 600, vary: false,
+        help: 'Number of months the forecast covers.' },
+
+      { key: 'new_studies_per_year', group: 'pipeline', label: 'New studies per year', kind: 'count',
+        min: 1, max: 20, step: 1, decimals: 1, def: 4,
+        help: 'Number of studies the unit starts each year. Starts are spread evenly across the months.' },
+      { key: 'study_duration', group: 'pipeline', label: 'Study duration (months)', short: 'Study duration', kind: 'count',
+        min: 1, max: 60, step: 1, decimals: 0, def: 24, whole: true, hardMin: 1,
+        help: 'Number of months each study stays active and recruits patients. Closeout follows in the next month.' },
+      { key: 'patients_per_month', group: 'pipeline', label: 'Patients recruited per study per month', kind: 'count',
+        min: 0, max: 5, step: 0.1, decimals: 2, def: 0.3,
+        help: 'Average number of patients each active study recruits per month.' },
+
+      { key: 'per_patient_payment', group: 'budget', label: 'Per patient payment', kind: 'money',
+        min: 0, max: 50000, step: 1000, decimals: 0, def: 30000,
+        help: 'Amount the sponsor pays for each patient recruited, before institutional overhead.' },
+      { key: 'per_patient_expense', group: 'budget', label: 'Per patient expenses (excluding staff)', short: 'Per patient expenses', kind: 'money',
+        min: 0, max: 20000, step: 500, decimals: 0, def: 10000,
+        help: 'Cost of each patient recruited, excluding staff costs.' },
+      { key: 'startup_revenue', group: 'budget', label: 'Revenue per study initiation', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
+        help: 'Amount received for starting a study, before institutional overhead.' },
+      { key: 'startup_cost', group: 'budget', label: 'Cost per study initiation', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 3500,
+        help: 'Cost of starting a study.' },
+      { key: 'closeout_revenue', group: 'budget', label: 'Revenue per study closeout', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
+        help: 'Amount received when a study closes, before institutional overhead.' },
+      { key: 'closeout_cost', group: 'budget', label: 'Cost per study closeout', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 3500,
+        help: 'Cost of closing a study.' },
+
+      { key: 'institute_overhead', group: 'finance', label: 'Institutional overhead', kind: 'percent',
+        min: 0, max: 50, step: 1, decimals: 2, def: 30, hardMax: 100,
+        help: 'Share of all study revenue that the institution keeps. The unit receives the rest.' },
+      { key: 'inflation_rate', group: 'finance', label: 'Annual inflation rate', kind: 'percent',
+        min: 0, max: 10, step: 0.5, decimals: 2, def: 3,
+        help: 'Yearly increase applied to revenue, costs and salaries from year 2.' },
+      { key: 'fixed_costs', group: 'finance', label: 'Monthly fixed costs', kind: 'money',
+        min: 0, max: 50000, step: 1000, decimals: 0, def: 0,
+        help: 'Costs that do not depend on activity, such as rent and utilities.' },
+
+      { key: 'ra_salary', group: 'staff', label: 'Monthly research assistant salary', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
+        help: 'Starting monthly salary of one research assistant, before benefits.' },
+      { key: 'coordinator_salary', group: 'staff', label: 'Monthly coordinator salary', kind: 'money',
+        min: 0, max: 15000, step: 500, decimals: 0, def: 5500,
+        help: 'Starting monthly salary of one coordinator, before benefits.' },
+      { key: 'studies_per_ra', group: 'staff', label: 'Studies per research assistant', kind: 'count',
+        min: 1, max: 10, step: 0.5, decimals: 1, def: 5, hardMin: 0.1,
+        help: 'Number of active studies one research assistant can support.' },
+      { key: 'studies_per_coordinator', group: 'staff', label: 'Studies per coordinator', kind: 'count',
+        min: 1, max: 15, step: 0.5, decimals: 1, def: 10, hardMin: 0.1,
+        help: 'Number of active studies one coordinator can support.' },
+      { key: 'annual_raise', group: 'staff', label: 'Annual raise (above inflation)', short: 'Annual raise', kind: 'percent',
+        min: 0, max: 10, step: 0.5, decimals: 2, def: 2,
+        help: 'Yearly salary increase on top of inflation, applied from year 2.' },
+      { key: 'benefits_rate', group: 'staff', label: 'Benefits (% of salary)', short: 'Benefits', kind: 'percent',
+        min: 0, max: 50, step: 1, decimals: 2, def: 30,
+        help: 'Cost of benefits as a percentage of salary.' },
+      { key: 'severance_rate', group: 'staff', label: 'Severance accrual (% of salary and benefits)', short: 'Severance accrual', kind: 'percent',
+        min: 0, max: 20, step: 0.5, decimals: 2, def: 5,
+        help: 'Amount set aside each month for severance, as a percentage of salary plus benefits.' },
+      { key: 'admin_premium', group: 'staff', label: 'Admin costs per staff member, per year', short: 'Admin costs per staff member', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 5000,
+        help: 'Yearly cost of managing each staff member. It rises with inflation.' },
+      { key: 'allow_fractional_staff', group: 'staff', label: 'Allow fractional staff', kind: 'toggle', def: false,
+        help: 'When on, the unit can hire part of a position, such as 0.5 of a full-time role, as in a shared staffing model. When off, the unit hires whole positions only.' }
+    ];
+
+    const BY_KEY = {};
+    const DEFAULTS = {};
+    PARAMS.forEach(p => { BY_KEY[p.key] = p; DEFAULTS[p.key] = p.def; });
+
+    const roundTo = (value, decimals) => { const f = Math.pow(10, decimals); return Math.round(value * f) / f; };
+
+    // Limits a value to what the model can work with. The page applies the
+    // narrower slider ranges itself, through fit().
+    function clean(raw) {
+      const out = {};
+      PARAMS.forEach(p => {
+        const v = raw ? raw[p.key] : undefined;
+        if (p.kind === 'toggle') { out[p.key] = v === true || v === 1 || v === '1' || v === 'true'; return; }
+        let n = typeof v === 'number' ? v : parseFloat(v);
+        if (!Number.isFinite(n)) n = p.def;
+        n = Math.max(p.hardMin === undefined ? 0 : p.hardMin, Math.min(p.hardMax === undefined ? Infinity : p.hardMax, n));
+        out[p.key] = p.whole ? Math.round(n) : n;
+      });
+      return out;
+    }
+
+    // Fits a typed, dragged or linked value to the range and precision of its input.
+    function fit(key, value) {
+      const p = BY_KEY[key];
+      if (p.kind === 'toggle') return value === true || value === 1 || value === '1' || value === 'true';
+      const n = typeof value === 'number' ? value : parseFloat(value);
+      if (!Number.isFinite(n)) return p.def;
+      return roundTo(Math.max(p.min, Math.min(p.max, n)), p.decimals);
+    }
+
+    // Staff are hired in whole positions. Arithmetic on fractions can land a hair
+    // above a whole number (2.0000000000000004), which must not count as a third position.
+    const wholePositions = needed => Math.ceil(needed - 1e-9);
+
+    const SERIES = ['month', 'year', 'active', 'started', 'completed', 'patients', 'ra', 'coordinators',
+      'grossRevenue', 'overhead', 'revStartup', 'revPatients', 'revCloseout', 'revenue',
+      'costRA', 'costCoordinators', 'costSeverance', 'costStaffAdmin', 'costStaff',
+      'costStartup', 'costPatients', 'costCloseout', 'costFixed', 'costOther', 'costs', 'net', 'cumulative'];
+
+    function simulate(rawInputs) {
+      const p = clean(rawInputs);
+      const months = p.total_months;
+      const duration = p.study_duration;
+      const startsPerMonth = p.new_studies_per_year / 12;
+      const inflation = 1 + p.inflation_rate / 100;
+      const raise = 1 + p.annual_raise / 100;
+      const kept = 1 - p.institute_overhead / 100;        // share of revenue the unit keeps
+      const withBenefits = 1 + p.benefits_rate / 100;
+      const severanceRate = p.severance_rate / 100;
+
+      const s = {};
+      SERIES.forEach(name => { s[name] = new Array(months); });
+
+      let ra = 0;
+      let coordinators = 0;
+      let cumulative = 0;
+
+      for (let i = 0; i < months; i++) {
+        const month = i + 1;
+        const yearsElapsed = Math.floor(i / 12);            // 0 during year 1
+        const inflationFactor = Math.pow(inflation, yearsElapsed);
+        const salaryFactor = inflationFactor * Math.pow(raise, yearsElapsed);
+
+        // Studies. A study started in month k is active for months k to k + duration - 1
+        // and closes in month k + duration.
+        const started = startsPerMonth;
+        const completed = month > duration ? startsPerMonth : 0;
+        const active = Math.min(month, duration) * startsPerMonth;
+        const patients = active * p.patients_per_month;
+
+        // Staff. Headcount never falls.
+        const raNeeded = active / p.studies_per_ra;
+        const coordinatorsNeeded = active / p.studies_per_coordinator;
+        ra = Math.max(ra, p.allow_fractional_staff ? raNeeded : wholePositions(raNeeded));
+        coordinators = Math.max(coordinators, p.allow_fractional_staff ? coordinatorsNeeded : wholePositions(coordinatorsNeeded));
+
+        // Revenue. The institution takes its overhead before the unit receives anything.
+        const grossStartup = started * p.startup_revenue * inflationFactor;
+        const grossPatients = patients * p.per_patient_payment * inflationFactor;
+        const grossCloseout = completed * p.closeout_revenue * inflationFactor;
+        const grossRevenue = grossStartup + grossPatients + grossCloseout;
+        const revStartup = grossStartup * kept;
+        const revPatients = grossPatients * kept;
+        const revCloseout = grossCloseout * kept;
+        const revenue = revStartup + revPatients + revCloseout;
+
+        // Staff costs.
+        const costRA = ra * p.ra_salary * salaryFactor * withBenefits;
+        const costCoordinators = coordinators * p.coordinator_salary * salaryFactor * withBenefits;
+        const costSeverance = (costRA + costCoordinators) * severanceRate;
+        const costStaffAdmin = (ra + coordinators) * (p.admin_premium / 12) * inflationFactor;
+        const costStaff = costRA + costCoordinators + costSeverance + costStaffAdmin;
+
+        // Other costs.
+        const costStartup = started * p.startup_cost * inflationFactor;
+        const costPatients = patients * p.per_patient_expense * inflationFactor;
+        const costCloseout = completed * p.closeout_cost * inflationFactor;
+        const costFixed = p.fixed_costs * inflationFactor;
+        const costOther = costStartup + costPatients + costCloseout + costFixed;
+
+        const costs = costStaff + costOther;
+        const net = revenue - costs;
+        cumulative += net;
+
+        s.month[i] = month;
+        s.year[i] = yearsElapsed + 1;
+        s.active[i] = active;
+        s.started[i] = started;
+        s.completed[i] = completed;
+        s.patients[i] = patients;
+        s.ra[i] = ra;
+        s.coordinators[i] = coordinators;
+        s.grossRevenue[i] = grossRevenue;
+        s.overhead[i] = grossRevenue - revenue;
+        s.revStartup[i] = revStartup;
+        s.revPatients[i] = revPatients;
+        s.revCloseout[i] = revCloseout;
+        s.revenue[i] = revenue;
+        s.costRA[i] = costRA;
+        s.costCoordinators[i] = costCoordinators;
+        s.costSeverance[i] = costSeverance;
+        s.costStaffAdmin[i] = costStaffAdmin;
+        s.costStaff[i] = costStaff;
+        s.costStartup[i] = costStartup;
+        s.costPatients[i] = costPatients;
+        s.costCloseout[i] = costCloseout;
+        s.costFixed[i] = costFixed;
+        s.costOther[i] = costOther;
+        s.costs[i] = costs;
+        s.net[i] = net;
+        s.cumulative[i] = cumulative;
+      }
+      return { inputs: p, months: months, series: s };
+    }
+
+    // Totals and headline figures for one simulation.
+    function summarize(sim) {
+      const s = sim.series;
+      const months = sim.months;
+      const total = name => { let t = 0; for (let i = 0; i < months; i++) t += s[name][i]; return t; };
+      const CENT = 0.005;                                   // ignore rounding noise around zero
+
+      let lowest = 0;
+      let lowestMonth = 0;
+      let lastDeficitMonth = 0;
+      for (let i = 0; i < months; i++) {
+        const c = s.cumulative[i];
+        if (c < -CENT) {
+          lastDeficitMonth = i + 1;
+          if (c < lowest) { lowest = c; lowestMonth = i + 1; }
+        }
+      }
+      const everInDeficit = lastDeficitMonth > 0;
+      const lastMonths = Math.min(12, months);
+      let lastNet = 0;
+      for (let i = months - lastMonths; i < months; i++) lastNet += s.net[i];
+
+      const out = {
+        months: months,
+        everInDeficit: everInDeficit,
+        lowest: lowest,
+        lowestMonth: lowestMonth,
+        fundingNeeded: everInDeficit ? -lowest : 0,
+        // First month from which the cumulative figure stays at or above zero.
+        // null when there was never a deficit, or when the deficit lasts to the end.
+        breakEvenMonth: everInDeficit && lastDeficitMonth < months ? lastDeficitMonth + 1 : null,
+        finalCumulative: s.cumulative[months - 1],
+        lastMonths: lastMonths,
+        lastNet: lastNet,
+        netProfit: total('net'),
+        studiesStarted: total('started'),
+        studiesCompleted: total('completed'),
+        patients: total('patients')
+      };
+      ['grossRevenue', 'overhead', 'revenue', 'costRA', 'costCoordinators', 'costSeverance', 'costStaffAdmin', 'costStaff',
+        'costStartup', 'costPatients', 'costCloseout', 'costFixed', 'costOther', 'costs'].forEach(name => { out[name] = total(name); });
+      return out;
+    }
+
+    // One row per forecast year. The last year can be shorter than 12 months.
+    function yearly(sim) {
+      const s = sim.series;
+      const rows = [];
+      for (let start = 0; start < sim.months; start += 12) {
+        const end = Math.min(start + 12, sim.months);
+        const add = name => { let t = 0; for (let i = start; i < end; i++) t += s[name][i]; return t; };
+        rows.push({
+          year: start / 12 + 1,
+          months: end - start,
+          revenue: add('revenue'),
+          costStaff: add('costStaff'),
+          costOther: add('costOther'),
+          costs: add('costs'),
+          net: add('net'),
+          cumulative: s.cumulative[end - 1],
+          patients: add('patients'),
+          active: s.active[end - 1],
+          ra: s.ra[end - 1],
+          coordinators: s.coordinators[end - 1]
+        });
+      }
+      return rows;
+    }
+
+    // Changes one input at a time by the given fraction (20% by default), up and
+    // down, and reports what happens to net profit over the forecast.
+    function sensitivity(rawInputs, change) {
+      const base = clean(rawInputs);
+      const fraction = change === undefined ? 0.2 : change;
+      const netProfit = inputs => summarize(simulate(inputs)).netProfit;
+      const baseNet = netProfit(base);
+      const rows = [];
+      PARAMS.forEach(p => {
+        if (p.kind === 'toggle' || p.vary === false) return;
+        const tested = [1 - fraction, 1 + fraction].map(factor => {
+          const v = roundTo(base[p.key] * factor, p.decimals);
+          return Math.max(p.hardMin === undefined ? 0 : p.hardMin, Math.min(p.hardMax === undefined ? Infinity : p.hardMax, v));
+        });
+        const run = value => {
+          if (value === base[p.key]) return baseNet;
+          const next = Object.assign({}, base);
+          next[p.key] = value;
+          return netProfit(next);
         };
-        
-        let monthCount = 0;
-        for (let month = startMonth; month < endMonth; month++) {
-            yearData.revenue.total += fin.total_revenue_monthly[month];
-            yearData.costs.staff += fin.staff_costs_monthly[month];
-            yearData.costs.total += fin.total_costs_monthly[month];
-            yearData.metrics.avgRAs += fin.num_ras_employed[month];
-            yearData.metrics.avgCoordinators += fin.num_coordinators_employed[month];
-            monthCount++;
-        }
-        
-        yearData.metrics.activeStudies = fin.active_studies[endMonth - 1];
-        yearData.metrics.avgRAs = yearData.metrics.avgRAs / monthCount;
-        yearData.metrics.avgCoordinators = yearData.metrics.avgCoordinators / monthCount;
-        
-        yearData.costs.other = yearData.costs.total - yearData.costs.staff;
-        yearData.profit = yearData.revenue.total - yearData.costs.total;
-        cumulativeProfit += yearData.profit;
-        yearData.cumulativeProfit = cumulativeProfit;
-        
-        yearlyData.push(yearData);
+        const netLow = run(tested[0]);
+        const netHigh = run(tested[1]);
+        const deltaLow = netLow - baseNet;
+        const deltaHigh = netHigh - baseNet;
+        rows.push({
+          key: p.key, base: base[p.key], low: tested[0], high: tested[1],
+          netLow: netLow, netHigh: netHigh, deltaLow: deltaLow, deltaHigh: deltaHigh,
+          range: Math.max(0, deltaLow, deltaHigh) - Math.min(0, deltaLow, deltaHigh)
+        });
+      });
+      rows.sort((a, b) => b.range - a.range);
+      return { baseNet: baseNet, change: fraction, rows: rows };
     }
-    
-    return yearlyData;
-}
 
-// Function to render the yearly breakdown table
-function renderYearlyBreakdownTable(fin, params) {
-    const yearlyData = calculateYearlyBreakdown(fin, params);
-    
-    function formatStaffCount(count, allowFractional) {
-        return allowFractional ? count.toFixed(2) : Math.round(count);
-    }
-    
-    let tableHtml = `
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>Year</th>
-                    <th>Revenue</th>
-                    <th>Staff Costs</th>
-                    <th>Other Costs</th>
-                    <th>Total Costs</th>
-                    <th>Profit</th>
-                    <th>Cumulative Profit</th>
-                    <th>Active Studies</th>
-                    <th>Staff (RA/Coord)</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-    
-    yearlyData.forEach(year => {
-        tableHtml += `
-            <tr>
-                <td>${year.year}</td>
-                <td>${formatCurrency(year.revenue.total)}</td>
-                <td>${formatCurrency(year.costs.staff)}</td>
-                <td>${formatCurrency(year.costs.other)}</td>
-                <td>${formatCurrency(year.costs.total)}</td>
-                <td class="${year.profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(year.profit)}</td>
-                <td class="${year.cumulativeProfit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(year.cumulativeProfit)}</td>
-                <td>${formatStaffCount(year.metrics.activeStudies, false)}</td>
-                <td>${formatStaffCount(year.metrics.avgRAs, params.allow_fractional_staff)}/${formatStaffCount(year.metrics.avgCoordinators, params.allow_fractional_staff)}</td>
-            </tr>
-        `;
-    });
-    
-    tableHtml += `
-            </tbody>
-        </table>
-    `;
-    
-    return tableHtml;
-}
-                // Function to render staff costs plot
-                function renderStaffCostsPlot(fin) {
-                    let data = [
-                        {
-                            x: fin.months,
-                            y: fin.ra_costs_monthly,
-                            type: 'bar',
-                            name: 'RA Costs',
-                            marker: { color: '#1f77b4' }
-                        },
-                        {
-                            x: fin.months,
-                            y: fin.coordinator_costs_monthly,
-                            type: 'bar',
-                            name: 'Coordinator Costs',
-                            marker: { color: '#ff7f0e' }
-                        }
-                    ];
-                    let layout = {
-                        barmode: 'stack',
-                        title: 'Staff Costs Over Time',
-                        xaxis: { title: 'Month' },
-                        yaxis: { title: 'Costs ($)' },
-                        hovermode: 'x unified',
-                        height: 400,
-                        width: 1200
-                    };
-                    Plotly.newPlot('staff_costs_plot', data, layout, {responsive: true});
-                }
-
- // Function to render metrics table
- function renderMetricsTable(fin, params) {
-    // Calculate total studies started and closed
-    const total_studies_started = fin.months.length * (params.new_studies_per_year / 12);
-    const total_studies_closed = fin.months
-        .filter(m => m > params.study_duration)
-        .length * (params.new_studies_per_year / 12);
-
-    // First calculate the total admin premium
-    const total_admin_premium = fin.admin_premium_monthly.reduce((a, b) => a + b, 0);
-
-    let metrics = [
-        ['Total Patients Recruited', Math.round(fin.total_patients_recruited).toLocaleString()],
-        ['Total Studies Started', Math.round(total_studies_started).toLocaleString()],
-        ['Total Studies Completed', Math.round(total_studies_closed).toLocaleString()],
-        ['Total Revenue', formatCurrency(fin.total_revenue)],
-        ['Total Costs', formatCurrency(fin.total_costs)],
-        ['Net Profit', formatCurrency(fin.net_profit)],
-        ['Total Overhead Deducted', formatCurrency(fin.institute_overhead_monthly.reduce((a, b) => a + b, 0))],
-        ['Total Research Assistant Spend', formatCurrency(fin.total_ra_spend)],
-        ['Total Coordinator Spend', formatCurrency(fin.total_coordinator_spend)],
-        ['Total Staff Administration Spend', formatCurrency(total_admin_premium)]  // Add this line
+    // [column heading, series name, decimals]
+    const CSV_COLUMNS = [
+      ['Month', 'month', 0], ['Year', 'year', 0],
+      ['Active studies', 'active', 4], ['Studies started', 'started', 4], ['Studies completed', 'completed', 4],
+      ['Patients recruited', 'patients', 4], ['Research assistants', 'ra', 4], ['Coordinators', 'coordinators', 4],
+      ['Revenue before overhead', 'grossRevenue', 2], ['Institutional overhead', 'overhead', 2],
+      ['Revenue from study initiation', 'revStartup', 2], ['Revenue from patients', 'revPatients', 2],
+      ['Revenue from study closeout', 'revCloseout', 2], ['Revenue', 'revenue', 2],
+      ['Research assistant salaries and benefits', 'costRA', 2], ['Coordinator salaries and benefits', 'costCoordinators', 2],
+      ['Severance accrual', 'costSeverance', 2], ['Staff administration', 'costStaffAdmin', 2], ['Staff costs', 'costStaff', 2],
+      ['Study initiation costs', 'costStartup', 2], ['Per patient expenses', 'costPatients', 2],
+      ['Study closeout costs', 'costCloseout', 2], ['Fixed costs', 'costFixed', 2], ['Other costs', 'costOther', 2],
+      ['Total costs', 'costs', 2], ['Net profit', 'net', 2], ['Cumulative net profit', 'cumulative', 2]
     ];
 
-    let table = `
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Metric</th>
-                    <th>Value</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${metrics.map(([metric, value]) => `
-                    <tr>
-                        <td>${metric}</td>
-                        <td>${value}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-    $('#metrics_table').html(table);
-}
+    function toCsv(sim) {
+      const lines = [CSV_COLUMNS.map(c => c[0]).join(',')];
+      for (let i = 0; i < sim.months; i++) {
+        lines.push(CSV_COLUMNS.map(c => String(roundTo(sim.series[c[1]][i], c[2]) + 0)).join(','));
+      }
+      return lines.join('\r\n') + '\r\n';
+    }
 
-                // Function to run the simulation
-                function runSimulation() {
-                    // Collect inputs
-                    let params = {
-        startup_revenue: parseFloat($('#startup_revenue').val()),
-        startup_cost: parseFloat($('#startup_cost').val()),
-        closeout_revenue: parseFloat($('#closeout_revenue').val()),
-        closeout_cost: parseFloat($('#closeout_cost').val()),
-        new_studies_per_year: parseFloat($('#new_studies_per_year').val()),
+    // Shared links carry only the inputs that differ from the defaults.
+    function encode(inputs) {
+      const parts = [];
+      PARAMS.forEach(p => {
+        const v = inputs[p.key];
+        if (v === p.def) return;
+        parts.push(p.key + '=' + (p.kind === 'toggle' ? (v ? 1 : 0) : v));
+      });
+      return parts.join('&');
+    }
 
-        study_duration: parseFloat($('#study_duration').val()),
-        per_patient_payment: parseFloat($('#per_patient_payment').val()),
-        per_patient_expense: parseFloat($('#per_patient_expense').val()),
-        patients_per_month: parseFloat($('#patients_per_month').val()),
-        inflation_rate: parseFloat($('#inflation_rate').val()),
-        fixed_costs: parseFloat($('#fixed_costs').val()),
-        institute_overhead: parseFloat($('#institute_overhead').val()),
+    function decode(text) {
+      const out = Object.assign({}, DEFAULTS);
+      const query = new URLSearchParams(String(text || '').replace(/^[#?]/, ''));
+      PARAMS.forEach(p => { if (query.has(p.key)) out[p.key] = fit(p.key, query.get(p.key)); });
+      return out;
+    }
 
-        ra_salary: parseFloat($('#ra_salary').val()),
-        coordinator_salary: parseFloat($('#coordinator_salary').val()),
-        annual_raise: parseFloat($('#annual_raise').val()),
-        ras_per_study: 1 / parseFloat($('#studies_per_ra').val()), // Convert from studies per RA to RAs per study
-        coordinators_per_study: 1 / parseFloat($('#studies_per_coordinator').val()), // Convert from studies per coordinator to coordinators per study
-        benefits_rate: parseFloat($('#benefits_rate').val()),
-        severance_rate: parseFloat($('#severance_rate').val()),
-        admin_premium: parseFloat($('#admin_premium').val()),
-        allow_fractional_staff: $('#allow_fractional_staff').is(':checked'),
-
-        total_months: parseInt($('#total_months').val())
+    root.TrialUnitModel = {
+      GROUPS: GROUPS, PARAMS: PARAMS, BY_KEY: BY_KEY, DEFAULTS: DEFAULTS, CSV_COLUMNS: CSV_COLUMNS,
+      clean: clean, fit: fit, simulate: simulate, summarize: summarize, yearly: yearly,
+      sensitivity: sensitivity, toCsv: toCsv, encode: encode, decode: decode
     };
+  })(typeof globalThis !== 'undefined' ? globalThis : this);
+  </script>
 
-    // Perform calculations
-    let fin = calculateFinancials(params);
+  <!-- =====================================================================
+       PAGE. Inputs, headline figures, charts and tables.
+       ===================================================================== -->
+  <script id="app">
+  (function () {
+    'use strict';
 
-    // Update outputs
-    $('#forecast-title').text(params.total_months + ' month forecast');
-    
-    // Rest of the output updates...
-    $('#yearly_breakdown_table').html(renderYearlyBreakdownTable(fin, params));
-    $('#total_revenue_output').text(`Total Revenue over ${params.total_months} months: ${formatCurrency(fin.total_revenue)}`);
-    $('#net_profit_output').text(`Net Profit over ${params.total_months} months: ${formatCurrency(fin.net_profit)}`);
-    $('#total_patients_output').text(`Total Patients Recruited over ${params.total_months} months: ${Math.round(fin.total_patients_recruited).toLocaleString()}`);
+    const M = window.TrialUnitModel;
+    const PARAMS = M.PARAMS;
+    const TABS = ['overview', 'costs', 'staffing', 'sensitivity', 'yearly', 'monthly', 'about'];
+    const state = { inputs: Object.assign({}, M.DEFAULTS), tab: 'overview', sim: null, summary: null };
 
-    // Render plots and tables
-    renderCashFlowPlot(fin);
-    renderStaffingLevelsPlot(fin);
-    renderStaffCostsPlot(fin);
-    renderMetricsTable(fin,params);
-}
+    /* ---------- Building blocks ---------- */
+    const $ = id => document.getElementById(id);
+    function make(ns, tag, attrs, kids) {
+      const node = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
+      Object.keys(attrs || {}).forEach(name => {
+        const v = attrs[name];
+        if (v === null || v === undefined || v === false) return;
+        if (name === 'text') node.textContent = v;         // text only, never markup
+        else node.setAttribute(name, v === true ? '' : String(v));
+      });
+      kids.forEach(kid => { if (kid !== null && kid !== undefined && kid !== false) node.append(kid); });
+      return node;
+    }
+    const el = (tag, attrs, ...kids) => make(null, tag, attrs, kids.flat());
+    const sv = (tag, attrs, ...kids) => make('http://www.w3.org/2000/svg', tag, attrs, kids.flat());
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const r2 = v => Math.round(v * 100) / 100;
+    const indexes = n => Array.from({ length: n }, (_, i) => i);
+    const largest = values => Math.max.apply(null, values);
+    // True when the keyboard put the focus there. Browsers too old to know the test count as true.
+    const keyboardFocus = node => { try { return node.matches(':focus-visible'); } catch (err) { return true; } };
 
-                // Initialize the first tab as active
-                $('.nav-tabs a[href="#key-metrics"]').tab('show');
+    /* ---------- Number formats ---------- */
+    const MINUS = '−';
+    const formats = {};
+    function num(value, decimals) {
+      const d = decimals || 0;
+      const f = formats[d] || (formats[d] = new Intl.NumberFormat('en-US', { maximumFractionDigits: d }));
+      const body = f.format(Math.abs(value));
+      return (value < 0 && /[1-9]/.test(body) ? MINUS : '') + body;
+    }
+    const money = v => { const body = num(v, 0); return body.charAt(0) === MINUS ? MINUS + '$' + body.slice(1) : '$' + body; };
+    // Three significant figures: 1,284 / 12.9K / 138K / 2.72M
+    function short(a) {
+      if (a < 9999.5) return num(a, 0);
+      let x = a / 1e3;
+      let unit = 'K';
+      if (x >= 999.5) { x = a / 1e6; unit = 'M'; }
+      if (x >= 999.5) { x = a / 1e9; unit = 'B'; }
+      return num(x, x < 9.995 ? 2 : x < 99.95 ? 1 : 0) + unit;
+    }
+    const moneyShort = v => (v <= -0.5 ? MINUS : '') + '$' + short(Math.abs(v));
+    const moneyChange = v => (v <= -0.5 ? MINUS : v >= 0.5 ? '+' : '') + '$' + short(Math.abs(v));
+    const isLoss = v => v <= -0.5;                           // shows as at least one dollar below zero
+    const cash = v => ({ text: money(v), neg: isLoss(v) });
+    function display(p, v) {
+      if (p.kind === 'money') return '$' + num(v, p.decimals);
+      if (p.kind === 'percent') return num(v, p.decimals) + '%';
+      return num(v, p.decimals);
+    }
+    // "1 coordinator", "2 coordinators", "0.8 coordinators"
+    const counted = (text, value, one, many) => text + ' ' + (Math.abs(value - 1) < 1e-9 ? one : many);
+
+    /* ---------- Messages ---------- */
+    let toastTimer = 0;
+    function toast(message, actionLabel, action) {
+      const box = $('toast');
+      box.replaceChildren(el('span', { text: message }));
+      if (actionLabel) {
+        const button = el('button', { type: 'button', text: actionLabel });
+        button.addEventListener('click', action);
+        box.append(button);
+      }
+      box.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { box.hidden = true; }, actionLabel ? 8000 : 2600);
+    }
+
+    /* ---------- Inputs ---------- */
+    const fields = {};                                       // key -> { slider, box } or { check }
+
+    function syncField(key) {
+      const p = M.BY_KEY[key];
+      const v = state.inputs[key];
+      const f = fields[key];
+      if (p.kind === 'toggle') { f.check.checked = v; return; }
+      const text = display(p, v);
+      f.slider.value = String(v);
+      f.slider.setAttribute('aria-valuetext', text);
+      f.box.value = text;
+    }
+
+    function setInput(key, value) {
+      const v = M.fit(key, value);
+      const changed = v !== state.inputs[key];
+      state.inputs[key] = v;
+      syncField(key);
+      if (changed) schedule();
+    }
+
+    function applyInputs(next) {
+      PARAMS.forEach(p => { state.inputs[p.key] = M.fit(p.key, next[p.key]); syncField(p.key); });
+      recalc();
+    }
+
+    function rangeField(p) {
+      const id = 'in-' + p.key;
+      const slider = el('input', { type: 'range', id: id, min: p.min, max: p.max, step: p.step });
+      const box = el('input', {
+        type: 'text', class: 'num', id: id + '-exact', inputmode: p.decimals ? 'decimal' : 'numeric',
+        autocomplete: 'off', spellcheck: 'false', 'aria-label': p.label + ', exact value'
+      });
+      const commit = () => {
+        const typed = parseFloat(box.value.replace(/[^0-9.-]/g, ''));
+        setInput(p.key, Number.isFinite(typed) ? typed : state.inputs[p.key]);
+      };
+      slider.addEventListener('input', () => setInput(p.key, parseFloat(slider.value)));
+      box.addEventListener('focus', () => box.select());
+      box.addEventListener('change', commit);
+      box.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { commit(); box.select(); }
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          setInput(p.key, state.inputs[p.key] + (e.key === 'ArrowUp' ? p.step : -p.step));
+          box.select();
+        }
+      });
+      fields[p.key] = { slider: slider, box: box };
+      return el('div', { class: 'field' }, el('label', { for: id, title: p.help, text: p.label }), box, slider);
+    }
+
+    function toggleField(p) {
+      const id = 'in-' + p.key;
+      const check = el('input', { type: 'checkbox', role: 'switch', id: id, 'aria-describedby': id + '-help' });
+      check.addEventListener('change', () => setInput(p.key, check.checked));
+      fields[p.key] = { check: check };
+      return el('div', { class: 'toggle' },
+        el('label', { class: 'switch', for: id }, check, el('span', { text: p.label })),
+        el('p', { class: 'help', id: id + '-help', text: p.help }));
+    }
+
+    function buildInputs() {
+      // On small screens the groups start closed, so the results are not pushed far down the page.
+      const startOpen = !window.matchMedia('(max-width: 960px)').matches;
+      M.GROUPS.forEach(group => {
+        const body = el('div', { class: 'group-body' },
+          PARAMS.filter(p => p.group === group.id).map(p => (p.kind === 'toggle' ? toggleField(p) : rangeField(p))));
+        const details = el('details', { class: 'group' }, el('summary', { text: group.title }), body);
+        details.open = startOpen;
+        $('inputs').append(details);
+      });
+      PARAMS.forEach(p => syncField(p.key));
+    }
+
+    function buildDefinitions() {
+      M.GROUPS.forEach(group => {
+        const list = el('dl', { class: 'defs' });
+        PARAMS.filter(p => p.group === group.id).forEach(p => list.append(el('dt', { text: p.label }), el('dd', { text: p.help })));
+        $('definitions').append(el('h4', { text: group.title }), list);
+      });
+    }
+
+    /* ---------- Headline figures ---------- */
+    const tiles = {};
+    const minis = {};
+
+    function buildKpis() {
+      const meaning = {
+        net: 'Revenue after institutional overhead, minus all costs, added up over the forecast.',
+        even: 'The first month from which cumulative net profit stays at or above zero.',
+        need: 'The largest cumulative loss during the forecast.',
+        last: 'Net profit over the last 12 months of the forecast.'
+      };
+      Object.keys(meaning).forEach(id => {
+        const t = { label: el('dt', { title: meaning[id] }), value: el('dd', { class: 'k-value' }), dot: el('span', { class: 'status', 'aria-hidden': 'true' }), note: el('span') };
+        $('kpis').append(el('div', { class: 'card tile', 'data-kpi': id }, t.label, t.value, el('dd', { class: 'k-note' }, t.dot, t.note)));
+        tiles[id] = t;
+      });
+      [['net', 'Net profit'], ['even', 'Break-even'], ['need', 'Funding needed']].forEach(pair => {
+        const value = el('b');
+        $('mini').append(el('div', {}, el('small', { text: pair[1] }), value));
+        minis[pair[0]] = value;
+      });
+    }
+
+    function setTile(id, label, value, note, status, exact) {
+      const t = tiles[id];
+      t.label.textContent = label;
+      t.value.textContent = value;
+      if (exact) t.value.title = exact; else t.value.removeAttribute('title');
+      t.note.textContent = note;
+      t.dot.hidden = !status;
+      t.dot.className = 'status ' + (status || '');
+      if (minis[id]) minis[id].textContent = value;
+    }
+
+    function renderKpis() {
+      const sum = state.summary;
+      const profit = !isLoss(sum.netProfit);
+      // The share of revenue is left out when there is no revenue, or when a loss is many times the revenue.
+      const ratio = sum.revenue > 0 ? Math.abs(sum.netProfit) / sum.revenue : Infinity;
+      const share = ratio <= 10 ? ' · ' + num(ratio * 100, 1) + '% of revenue' : '';
+      setTile('net', 'Net profit over ' + sum.months + ' months', moneyShort(sum.netProfit),
+        (profit ? 'Profit' : 'Loss') + share, profit ? 'good' : 'bad', money(sum.netProfit));
+
+      if (!sum.everInDeficit) {
+        setTile('even', 'Break-even', 'No deficit', 'Cumulative profit never falls below zero', 'good');
+      } else if (sum.breakEvenMonth) {
+        setTile('even', 'Break-even', 'Month ' + sum.breakEvenMonth, 'Year ' + Math.ceil(sum.breakEvenMonth / 12) + ' of the forecast', 'good');
+      } else {
+        setTile('even', 'Break-even', 'Not reached', 'Cumulative loss of ' + moneyShort(-sum.finalCumulative) + ' at month ' + sum.months, 'bad');
+      }
+
+      setTile('need', 'Funding needed', moneyShort(sum.fundingNeeded),
+        sum.everInDeficit ? 'Peak cumulative loss, month ' + sum.lowestMonth : 'No cumulative loss in any month',
+        '', money(sum.fundingNeeded));
+
+      setTile('last', 'Net profit, final ' + sum.lastMonths + ' months', moneyShort(sum.lastNet),
+        moneyShort(sum.lastNet / sum.lastMonths) + ' per month', isLoss(sum.lastNet) ? 'bad' : 'good', money(sum.lastNet));
+    }
+
+    /* ---------- Tables ---------- */
+    function buildTable(head, rows, foot) {
+      const cell = (c, i) => {
+        const rich = c !== null && typeof c === 'object';
+        return el(i === 0 ? 'th' : 'td', { scope: i === 0 ? 'row' : null, class: ((i ? 'n' : '') + (rich && c.neg ? ' neg' : '')).trim() || null, text: rich ? c.text : c });
+      };
+      return el('table', { class: 'data' },
+        el('thead', {}, el('tr', {}, head.map((text, i) => el('th', { scope: 'col', class: i ? 'n' : null, text: text })))),
+        el('tbody', {}, rows.map(row => el('tr', {}, row.map(cell)))),
+        foot ? el('tfoot', {}, el('tr', {}, foot.map(cell))) : null);
+    }
+
+    /* ---------- Figures: a title, a legend, a chart and its table view ---------- */
+    function createFigure(host, title, hint) {
+      const toggle = el('button', { type: 'button', class: 'btn quiet', text: 'Show table' });
+      const fig = {
+        legend: el('div', { class: 'legend' }),
+        body: el('div', { class: 'fig-body' }),
+        table: el('section', { class: 'table-scroll', tabindex: '0', 'aria-label': title + ', table', hidden: true }),
+        showTable: false,
+        redraw: null
+      };
+      host.append(
+        el('div', { class: 'fig-head' }, el('h3', {}, title, hint ? el('span', { class: 'hint', text: hint }) : null), toggle),
+        fig.legend, fig.body, fig.table);
+      toggle.addEventListener('click', () => {
+        fig.showTable = !fig.showTable;
+        toggle.textContent = fig.showTable ? 'Show chart' : 'Show table';
+        fig.body.hidden = fig.showTable;
+        fig.table.hidden = !fig.showTable;
+        if (fig.redraw) fig.redraw();
+        updatePin();
+      });
+      return fig;
+    }
+
+    function setLegend(fig, items) {
+      fig.legend.hidden = fig.showTable || items.length < 2;   // one series needs no legend, the title names it
+      fig.legend.replaceChildren(...items.map(item =>
+        el('span', {}, el('span', { class: 'sw bg-' + item.color + (item.line ? ' line' : '') }), item.name)));
+    }
+
+    function fillTip(tip, title, rows) {
+      tip.replaceChildren(el('div', { class: 'tip-title', text: title }), ...rows.map(row =>
+        el('div', { class: 'tip-row' + (row.total ? ' total' : '') },
+          el('span', { class: 'key' + (row.color ? ' bg-' + row.color : '') }),
+          el('b', { text: row.value }), el('span', { class: 'name', text: row.name }))));
+      tip.hidden = false;
+    }
+
+    function placeTip(tip, x, y, width, height) {
+      const w = tip.offsetWidth;
+      const h = tip.offsetHeight;
+      let left = x + 14;
+      if (left + w > width - 2) left = x - 14 - w;
+      tip.style.left = Math.max(2, left) + 'px';
+      tip.style.top = clamp(y - h / 2, 2, Math.max(2, height - h - 2)) + 'px';
+    }
+
+    /* ---------- Charts over the months of the forecast ---------- */
+    const ruler = document.createElement('canvas').getContext('2d');
+    const bodyFont = getComputedStyle(document.body).fontFamily;
+    function textWidth(text, size) {
+      if (!ruler) return text.length * size * 0.56;
+      ruler.font = size + 'px ' + bodyFont;
+      return ruler.measureText(text).width;
+    }
+
+    // flatSpan is the range to show when every value is the same (an all-zero forecast).
+    function niceScale(lo, hi, maxTicks, whole, flatSpan) {
+      if (hi - lo < 1e-9) hi = lo + (flatSpan || 1);
+      const raw = (hi - lo) / maxTicks;
+      const power = Math.pow(10, Math.floor(Math.log10(raw)));
+      const f = raw / power;
+      let step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 && !whole ? 2.5 : f <= 5 ? 5 : 10) * power;
+      if (whole) step = Math.max(1, step);
+      const min = Math.floor(lo / step + 1e-9) * step;
+      const max = Math.ceil(hi / step - 1e-9) * step;
+      const ticks = [];
+      for (let k = 0; min + k * step <= max + step * 1e-6; k++) ticks.push(min + k * step);
+      return { min: min, max: max, step: step, ticks: ticks };
+    }
+
+    // One style per axis: whole dollars, or thousands, or millions.
+    function tickFormat(kind, scale) {
+      if (kind !== 'money') {
+        const d = scale.step >= 1 ? 0 : scale.step >= 0.1 ? 1 : 2;
+        return v => num(v, d);
+      }
+      const top = Math.max(Math.abs(scale.min), Math.abs(scale.max));
+      const unit = top >= 1e6 ? [1e6, 'M'] : top >= 1e4 ? [1e3, 'K'] : [1, ''];
+      return v => {
+        const zero = Math.abs(v) < scale.step / 1000;
+        return (v < 0 && !zero ? MINUS : '') + '$' + (zero ? '0' : num(Math.abs(v) / unit[0], 2) + unit[1]);
+      };
+    }
+
+    // A bar with its far end rounded and its base square.
+    function roundedBar(x, top, w, h, down) {
+      const r = Math.min(4, w * 0.3, h);
+      const b = top + h;
+      const right = x + w;
+      return down
+        ? 'M' + r2(x) + ',' + r2(top) + 'V' + r2(b - r) + 'Q' + r2(x) + ',' + r2(b) + ' ' + r2(x + r) + ',' + r2(b) +
+          'H' + r2(right - r) + 'Q' + r2(right) + ',' + r2(b) + ' ' + r2(right) + ',' + r2(b - r) + 'V' + r2(top) + 'Z'
+        : 'M' + r2(x) + ',' + r2(b) + 'V' + r2(top + r) + 'Q' + r2(x) + ',' + r2(top) + ' ' + r2(x + r) + ',' + r2(top) +
+          'H' + r2(right - r) + 'Q' + r2(right) + ',' + r2(top) + ' ' + r2(right) + ',' + r2(top + r) + 'V' + r2(b) + 'Z';
+    }
+
+    // Charts that sit one above the other share their left and right margins,
+    // so the same month falls at the same place in each.
+    const chartGroups = [];
+    function drawCharts() {
+      chartGroups.forEach(group => {
+        const ready = group.filter(c => c.layout());
+        if (!ready.length) return;
+        const left = largest(ready.map(c => c.plan.L));
+        const right = largest(ready.map(c => c.plan.R));
+        ready.forEach(c => c.paint(left, right));
+      });
+    }
+
+    // heights: [smallest, share of the window height, largest], in pixels.
+    function createChart(hostId, title, hint, heights, kind) {
+      const fig = createFigure($(hostId), title, hint);
+      const plot = el('div', { class: 'plot', tabindex: '0', role: 'group', 'aria-roledescription': 'chart', 'aria-label': title });
+      const tip = el('div', { class: 'tip', role: 'status', hidden: true });
+      fig.body.append(plot, tip);
+      const self = { spec: null, plan: null, layout: layout, paint: paint };
+      let geo = null;                                        // geometry of the last paint
+      let at = -1;                                           // month under the pointer
+      let drawnWidth = 0;
+
+      function setCursor(on) {
+        if (geo) geo.layers.forEach(layer => layer.setAttribute('visibility', on ? 'visible' : 'hidden'));
+      }
+      function hide() { tip.hidden = true; setCursor(false); }
+
+      function show(index, px, py) {
+        const spec = self.spec;
+        if (!geo || !spec) return;
+        const i = clamp(index, 0, spec.n - 1);
+        at = i;
+        const x = geo.cx(i);
+        if (geo.band) geo.band.setAttribute('x', r2(geo.L + geo.slot * i));
+        if (geo.cross) { geo.cross.setAttribute('x1', r2(x)); geo.cross.setAttribute('x2', r2(x)); }
+        geo.dots.forEach(d => { d.node.setAttribute('cx', r2(x)); d.node.setAttribute('cy', r2(geo.y(d.values[i]))); });
+        setCursor(true);
+        const info = spec.tip(i);
+        fillTip(tip, info.title, info.rows);
+        placeTip(tip, px === undefined ? x : px, py === undefined ? geo.T + tip.offsetHeight / 2 + 6 : py, geo.W, geo.H);
+      }
+
+      // Step 1. Choose the scale and work out the room the labels need.
+      // Returns false when there is no chart to paint (closed tab, or the table view).
+      function layout() {
+        const spec = self.spec;
+        self.plan = null;
+        if (!spec) return false;
+        setLegend(fig, spec.legend || []);
+        if (fig.showTable) {
+          fig.table.replaceChildren(buildTable(spec.table.head, indexes(spec.n).map(spec.table.row)));
+          return false;
+        }
+        const W = Math.floor(plot.clientWidth);
+        if (W < 80) { drawnWidth = 0; return false; }
+        const H = Math.round(clamp(window.innerHeight * heights[1], heights[0], heights[2]));
+        const T = 12;
+        const plotH = H - T - 26;
+        const n = spec.n;
+        const last = n - 1;
+        const bars = spec.bars || [];
+        const lines = spec.lines || [];
+
+        // Range of the values, always including zero.
+        let lo = 0;
+        let hi = 0;
+        const see = v => { if (v < lo) lo = v; if (v > hi) hi = v; };
+        if (bars.length) for (let i = 0; i < n; i++) see(bars.reduce((t, b) => t + b.values[i], 0));
+        lines.forEach(l => l.values.forEach(see));
+        const scale = niceScale(lo, hi, Math.max(2, Math.floor(plotH / 40)), spec.whole, kind === 'money' ? 1000 : 1);
+
+        // Keep room under a named low point for its label.
+        let floor = scale.min;
+        (spec.markers || []).forEach(mk => {
+          if (mk.below && plotH * (mk.value - floor) / (scale.max - floor) < 24) floor = (plotH * mk.value - 24 * scale.max) / (plotH - 24);
+        });
+
+        // Labels beside the last month: the end value of each line, the name of each stacked part.
+        const endLabels = [];
+        if (W >= 560) {
+          lines.forEach(l => { if (l.end) endLabels.push({ line: l, text: l.end(l.values[last]) }); });
+          if (spec.nameBars) bars.forEach(b => { if (b.values[last] > 0) endLabels.push({ bar: b, text: b.short || b.name }); });
+        }
+        const tickText = scale.ticks.map(tickFormat(kind, scale));
+        self.plan = {
+          W: W, H: H, T: T, plotH: plotH, n: n, bars: bars, lines: lines, scale: scale, floor: floor,
+          tickText: tickText, endLabels: endLabels,
+          L: Math.ceil(largest(tickText.map(t => textWidth(t, 11)))) + 14,
+          R: endLabels.length ? Math.ceil(largest(endLabels.map(e => textWidth(e.text, 12)))) + 20 : 14
+        };
+        return true;
+      }
+
+      // Step 2. Paint, with the margins agreed for the group.
+      function paint(L, R) {
+        const spec = self.spec;
+        const p = self.plan;
+        const W = p.W, H = p.H, T = p.T, plotH = p.plotH, n = p.n, bars = p.bars, lines = p.lines, scale = p.scale;
+        const last = n - 1;
+        drawnWidth = W;
+        plot.style.height = H + 'px';
+        plot.setAttribute('aria-label', title + '. ' + spec.describe + ' Use the left and right arrow keys to read each month. Show table lists every value.');
+
+        const plotW = W - L - R;
+        const slot = plotW / n;
+        const cx = i => L + slot * (i + 0.5);
+        const y = v => T + plotH * (1 - (v - p.floor) / (scale.max - p.floor));
+        const y0 = y(0);
+        const crisp = v => Math.round(v) + 0.5;
+
+        const root = sv('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, 'aria-hidden': 'true', focusable: 'false' });
+        const under = sv('g', { visibility: 'hidden' });       // pointer highlight, behind the bars
+        const over = sv('g', { visibility: 'hidden' });        // pointer line and dots, above the marks
+        geo = { W: W, H: H, L: L, T: T, slot: slot, cx: cx, y: y, layers: [under, over], band: null, cross: null, dots: [] };
+
+        // Gridlines and value labels.
+        scale.ticks.forEach((tick, k) => {
+          const zero = Math.abs(tick) < scale.step / 1000;
+          if (!zero) root.append(sv('line', { class: 'grid', x1: L, x2: L + plotW, y1: crisp(y(tick)), y2: crisp(y(tick)) }));
+          root.append(sv('text', { x: L - 8, y: crisp(y(tick)), dy: '0.32em', 'text-anchor': 'end', text: p.tickText[k] }));
+        });
+
+        // Month labels.
+        const every = n <= 18 ? 3 : n <= 36 ? 6 : 12;
+        for (let m = every; m <= n; m += every) root.append(sv('text', { x: r2(cx(m - 1)), y: H - 8, 'text-anchor': 'middle', text: String(m) }));
+        if (cx(every - 1) - L >= 46) root.append(sv('text', { x: L, y: H - 8, text: 'Month' }));
+
+        // Bars. A gap of the background colour separates neighbours and stacked parts.
+        let barWidth = 0;
+        if (bars.length) {
+          geo.band = sv('rect', { class: 'band', x: L, y: T, width: r2(slot), height: plotH });
+          under.append(geo.band);
+          root.append(under);
+          const gap = slot >= 6 ? 2 : slot >= 3 ? 1 : 0;
+          barWidth = Math.max(1, Math.min(24, slot - gap));
+          for (let i = 0; i < n; i++) {
+            const x = cx(i) - barWidth / 2;
+            const parts = bars.filter(b => b.values[i] !== 0);
+            let acc = 0;
+            parts.forEach((b, k) => {
+              const v = b.values[i];
+              const a = y(acc);
+              const z = y(acc + v);
+              acc += v;
+              const top = Math.min(a, z);
+              let bottom = Math.max(a, z);
+              if (k > 0 && bottom - top > 4) bottom -= 2;
+              const h = Math.max(bottom - top, 0.5);
+              const cls = 'fill-' + (v < 0 && b.negColor ? b.negColor : b.color);
+              root.append(k === parts.length - 1
+                ? sv('path', { class: cls, d: roundedBar(x, top, barWidth, h, v < 0) })
+                : sv('rect', { class: cls, x: r2(x), y: r2(top), width: r2(barWidth), height: r2(h) }));
             });
-        </script>
-    </body>
+          }
+        } else {
+          geo.cross = sv('line', { class: 'axis', x1: L, x2: L, y1: T, y2: T + plotH });
+          over.append(geo.cross);
+        }
+        root.append(sv('line', { class: 'axis', x1: L, x2: L + plotW, y1: crisp(y0), y2: crisp(y0) }));
+
+        // Lines. Stepped lines hold their value across the month.
+        const lineEnds = [];
+        lines.forEach(l => {
+          const pts = [];
+          for (let i = 0; i < n; i++) {
+            const yy = y(l.values[i]);
+            if (l.step) pts.push([L + slot * i, yy], [L + slot * (i + 1), yy]);
+            else pts.push([cx(i), yy]);
+          }
+          const d = pts.map((pt, k) => (k ? 'L' : 'M') + r2(pt[0]) + ',' + r2(pt[1])).join('');
+          const end = pts[pts.length - 1];
+          if (l.area) root.append(sv('path', { class: 'area fill-' + l.color, d: d + 'L' + r2(end[0]) + ',' + r2(y0) + 'L' + r2(pts[0][0]) + ',' + r2(y0) + 'Z' }));
+          root.append(sv('path', { class: 'line stroke-' + l.color, d: d }));
+          root.append(sv('circle', { class: 'dot fill-' + l.color, cx: r2(end[0]), cy: r2(end[1]), r: 4 }));
+          lineEnds.push({ line: l, x: end[0], y: end[1] });
+          const dot = sv('circle', { class: 'dot fill-' + l.color, r: 4 });
+          over.append(dot);
+          geo.dots.push({ node: dot, values: l.values });
+        });
+
+        // Labels. One that would touch another is left out; the legend, the pointer
+        // readout and the table still carry it.
+        const taken = [];
+        const touches = box => taken.some(t => box.x0 < t.x1 && box.x1 > t.x0 && box.y0 < t.y1 && box.y1 > t.y0);
+        const write = (box, text, cls) => {
+          taken.push(box);
+          root.append(sv('text', { class: cls, x: r2(box.x0), y: r2(box.base), text: text }));
+        };
+        const beside = (x, yy, text) => ({ x0: x, x1: x + textWidth(text, 12), y0: yy - 8, y1: yy + 8, base: yy + 4 });
+
+        const lineLabels = p.endLabels.filter(e => e.line).map(e => {
+          const end = lineEnds.find(item => item.line === e.line);
+          return { box: beside(end.x + 9, end.y, e.text), text: e.text };
+        });
+        // Line labels appear together or not at all, so no line is left unnamed beside a named one.
+        if (lineLabels.every((a, i) => lineLabels.every((b, j) => i === j || Math.abs(a.box.base - b.box.base) >= 15))) {
+          lineLabels.forEach(item => write(item.box, item.text, 'label halo quiet'));
+        }
+        let stacked = 0;
+        bars.forEach(b => {
+          const v = b.values[last];
+          if (!(v > 0)) return;
+          const tall = y(stacked) - y(stacked + v);
+          const middle = y(stacked + v / 2);
+          stacked += v;
+          const e = p.endLabels.find(item => item.bar === b);
+          if (!e || tall < 14) return;
+          const box = beside(cx(last) + barWidth / 2 + 8, middle, e.text);
+          if (!touches(box)) write(box, e.text, 'label');
+        });
+
+        // Points worth naming on the chart itself. The label takes the first free corner
+        // around the point: below a low point, above and to the left of a point on a rising line.
+        (spec.markers || []).forEach(mk => {
+          const x = cx(mk.i);
+          const yy = y(mk.value);
+          const w = textWidth(mk.text, 12);
+          root.append(sv('circle', { class: 'dot fill-' + mk.color, cx: r2(x), cy: r2(yy), r: 4 }));
+          const corners = mk.below ? [[1, 1], [-1, 1], [1, -1], [-1, -1]] : [[-1, -1], [1, 1], [1, -1], [-1, 1]];
+          const boxAt = c => {
+            const x0 = c[0] > 0 ? x + 9 : x - 9 - w;
+            const base = c[1] > 0 ? yy + 18 : yy - 9;
+            return { x0: x0, x1: x0 + w, y0: base - 11, y1: base + 4, base: base };
+          };
+          const fits = box => box.x0 >= L && box.x1 <= W - 4 && box.y0 >= T - 8 && box.y1 <= T + plotH + 3 && !touches(box);
+          let box = corners.map(boxAt).find(fits);
+          if (!box) {
+            box = boxAt(corners[0]);
+            const shift = clamp(box.x0, L, Math.max(L, W - 4 - w)) - box.x0;
+            box.x0 += shift;
+            box.x1 += shift;
+          }
+          write(box, mk.text, 'label halo');
+        });
+
+        root.append(over);
+        tip.hidden = true;
+        plot.replaceChildren(root);
+      }
+
+      const pointer = e => {
+        if (!geo || !self.spec || fig.showTable) return;
+        const box = plot.getBoundingClientRect();
+        const px = e.clientX - box.left;
+        show(Math.floor((px - geo.L) / geo.slot), px, e.clientY - box.top);
+      };
+      plot.addEventListener('pointermove', pointer);
+      plot.addEventListener('pointerdown', pointer);
+      plot.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hide(); });
+      plot.addEventListener('blur', hide);
+      plot.addEventListener('focus', () => { if (self.spec && keyboardFocus(plot)) show(at < 0 ? self.spec.n - 1 : at); });
+      plot.addEventListener('keydown', e => {
+        if (!self.spec) return;
+        const here = at < 0 ? self.spec.n - 1 : at;
+        const moves = { ArrowRight: here + 1, ArrowLeft: here - 1, Home: 0, End: self.spec.n - 1 };
+        if (e.key === 'Escape') { hide(); return; }
+        if (!(e.key in moves)) return;
+        e.preventDefault();
+        show(moves[e.key]);
+      });
+      document.addEventListener('pointerdown', e => { if (!plot.contains(e.target)) hide(); });
+      if ('ResizeObserver' in window) {
+        new ResizeObserver(() => { if (Math.floor(plot.clientWidth) !== drawnWidth) drawCharts(); }).observe(plot);
+      }
+      fig.redraw = drawCharts;
+      return self;
+    }
+
+    const chart = {};
+    function buildCharts() {
+      chart.cumulative = createChart('chart-cumulative', 'Cumulative net profit', 'Total profit or loss since month 1', [190, 0.30, 320], 'money');
+      chart.monthly = createChart('chart-monthly', 'Monthly net profit', 'Revenue minus costs in each month', [130, 0.19, 200], 'money');
+      chart.costs = createChart('chart-costs', 'Monthly revenue and costs', 'Revenue is shown after institutional overhead', [260, 0.46, 440], 'money');
+      chart.headcount = createChart('chart-headcount', 'Staff employed', 'Positions filled in each month', [150, 0.21, 230], 'count');
+      chart.staffcosts = createChart('chart-staffcosts', 'Monthly staff costs', 'Salaries, benefits, severance accrual and administration', [170, 0.25, 280], 'money');
+      chartGroups.push([chart.cumulative, chart.monthly], [chart.costs], [chart.headcount, chart.staffcosts]);
+    }
+
+    function renderCharts() {
+      const sim = state.sim;
+      const s = sim.series;
+      const sum = state.summary;
+      const n = sim.months;
+      const fractional = sim.inputs.allow_fractional_staff;
+      const staff = v => num(v, fractional ? 2 : 0);
+      const assistants = v => counted(staff(v), v, 'research assistant', 'research assistants');
+      const coordinators = v => counted(staff(v), v, 'coordinator', 'coordinators');
+      const monthTitle = i => 'Month ' + (i + 1) + ' (year ' + s.year[i] + ')';
+      const startAndClose = s.costStartup.map((v, i) => v + s.costCloseout[i]);
+      const used = values => values.some(v => v !== 0);
+
+      // Cumulative net profit.
+      const markers = [];
+      if (sum.everInDeficit && sum.lowestMonth < n) {
+        markers.push({ i: sum.lowestMonth - 1, value: sum.lowest, color: 'c1', below: true, text: 'Lowest: ' + moneyShort(sum.lowest) + ', month ' + sum.lowestMonth });
+      }
+      if (sum.breakEvenMonth) {
+        markers.push({ i: sum.breakEvenMonth - 1, value: s.cumulative[sum.breakEvenMonth - 1], color: 'c1', below: false, text: 'Break-even, month ' + sum.breakEvenMonth });
+      }
+      chart.cumulative.spec = {
+        n: n,
+        lines: [{ name: 'Cumulative net profit', color: 'c1', values: s.cumulative, area: true, end: moneyShort }],
+        markers: markers,
+        describe: 'Cumulative net profit ends at ' + money(sum.finalCumulative) + ' in month ' + n + '.',
+        tip: i => ({ title: monthTitle(i), rows: [
+          { color: 'c1', value: money(s.cumulative[i]), name: 'Cumulative net profit' },
+          { value: money(s.net[i]), name: 'Net profit this month' }] }),
+        table: { head: ['Month', 'Net profit in the month', 'Cumulative net profit'], row: i => [String(i + 1), cash(s.net[i]), cash(s.cumulative[i])] }
+      };
+
+      // Monthly net profit. Blue above zero, red below.
+      chart.monthly.spec = {
+        n: n,
+        bars: [{ name: 'Net profit', color: 'c1', negColor: 'red', values: s.net }],
+        legend: [{ name: 'Profit', color: 'c1' }, { name: 'Loss', color: 'red' }],
+        describe: 'Net profit is ' + money(s.net[0]) + ' in month 1 and ' + money(s.net[n - 1]) + ' in month ' + n + '.',
+        tip: i => ({ title: monthTitle(i), rows: [
+          { color: s.net[i] < 0 ? 'red' : 'c1', value: money(s.net[i]), name: 'Net profit' },
+          { value: money(s.revenue[i]), name: 'Revenue' },
+          { value: money(s.costs[i]), name: 'Costs' }] }),
+        table: { head: ['Month', 'Revenue', 'Costs', 'Net profit'], row: i => [String(i + 1), money(s.revenue[i]), money(s.costs[i]), cash(s.net[i])] }
+      };
+
+      // Costs by type, with revenue as a line. A colour stays with its cost type when another type is unused.
+      const costParts = [
+        { name: 'Staff costs', short: 'Staff', color: 'c1', values: s.costStaff },
+        { name: 'Per patient expenses', short: 'Patients', color: 'c2', values: s.costPatients },
+        { name: 'Study initiation and closeout', short: 'Initiation, closeout', color: 'c3', values: startAndClose },
+        { name: 'Fixed costs', short: 'Fixed', color: 'c4', values: s.costFixed }
+      ].filter(part => used(part.values));
+      chart.costs.spec = {
+        n: n,
+        bars: costParts,
+        nameBars: true,
+        lines: [{ name: 'Revenue', color: 'ink', values: s.revenue, end: () => 'Revenue' }],
+        legend: costParts.map(part => ({ name: part.name, color: part.color })).concat([{ name: 'Revenue', color: 'ink', line: true }]),
+        describe: 'In month ' + n + ', revenue is ' + money(s.revenue[n - 1]) + ' and costs are ' + money(s.costs[n - 1]) + '.',
+        tip: i => ({ title: monthTitle(i), rows: [{ color: 'ink', value: money(s.revenue[i]), name: 'Revenue' }]
+          .concat(costParts.map(part => ({ color: part.color, value: money(part.values[i]), name: part.name })))
+          .concat([{ value: money(s.costs[i]), name: 'Total costs', total: true }, { value: money(s.net[i]), name: 'Net profit' }]) }),
+        table: {
+          head: ['Month', 'Revenue'].concat(costParts.map(part => part.name)).concat(['Total costs', 'Net profit']),
+          row: i => [String(i + 1), money(s.revenue[i])].concat(costParts.map(part => money(part.values[i]))).concat([money(s.costs[i]), cash(s.net[i])])
+        }
+      };
+
+      // Staff employed.
+      chart.headcount.spec = {
+        n: n,
+        whole: !fractional,
+        lines: [
+          { name: 'Research assistants', color: 'c1', values: s.ra, step: true, end: v => counted(staff(v), v, 'assistant', 'assistants') },
+          { name: 'Coordinators', color: 'c2', values: s.coordinators, step: true, end: coordinators }],
+        legend: [{ name: 'Research assistants', color: 'c1', line: true }, { name: 'Coordinators', color: 'c2', line: true }],
+        describe: 'In month ' + n + ' the unit employs ' + assistants(s.ra[n - 1]) + ' and ' + coordinators(s.coordinators[n - 1]) + '.',
+        tip: i => ({ title: monthTitle(i), rows: [
+          { color: 'c1', value: staff(s.ra[i]), name: 'Research assistants' },
+          { color: 'c2', value: staff(s.coordinators[i]), name: 'Coordinators' },
+          { value: num(s.active[i], 2), name: 'Active studies', total: true }] }),
+        table: { head: ['Month', 'Active studies', 'Research assistants', 'Coordinators'], row: i => [String(i + 1), num(s.active[i], 2), staff(s.ra[i]), staff(s.coordinators[i])] }
+      };
+
+      // Staff costs by part.
+      const staffParts = [
+        { name: 'Research assistant salaries and benefits', short: 'Assistants', color: 'c1', values: s.costRA },
+        { name: 'Coordinator salaries and benefits', short: 'Coordinators', color: 'c2', values: s.costCoordinators },
+        { name: 'Severance accrual', short: 'Severance', color: 'c3', values: s.costSeverance },
+        { name: 'Staff administration', short: 'Administration', color: 'c4', values: s.costStaffAdmin }
+      ].filter(part => used(part.values));
+      chart.staffcosts.spec = {
+        n: n,
+        bars: staffParts,
+        nameBars: true,
+        legend: staffParts.map(part => ({ name: part.name, color: part.color })),
+        describe: 'Staff costs are ' + money(s.costStaff[0]) + ' in month 1 and ' + money(s.costStaff[n - 1]) + ' in month ' + n + '.',
+        tip: i => ({ title: monthTitle(i), rows: staffParts.map(part => ({ color: part.color, value: money(part.values[i]), name: part.name }))
+          .concat([{ value: money(s.costStaff[i]), name: 'Staff costs', total: true }]) }),
+        table: {
+          head: ['Month'].concat(staffParts.map(part => part.name)).concat(['Staff costs']),
+          row: i => [String(i + 1)].concat(staffParts.map(part => money(part.values[i]))).concat([money(s.costStaff[i])])
+        }
+      };
+
+      drawCharts();
+    }
+
+    /* ---------- Sensitivity ---------- */
+    let sensitivityFig = null;
+    let sensitivityTip = null;
+
+    function renderSensitivity() {
+      if (!sensitivityFig) {
+        sensitivityFig = createFigure($('sensitivity'), 'What moves net profit most',
+          'Change in net profit over the forecast when one input is 20% lower or higher and the others stay the same');
+        sensitivityTip = el('div', { class: 'tip', role: 'status', hidden: true });
+        sensitivityFig.redraw = renderSensitivity;
+      }
+      const fig = sensitivityFig;
+      const tip = sensitivityTip;
+      const result = M.sensitivity(state.inputs);
+      const percent = Math.round(result.change * 100) + '%';
+      const moving = result.rows.filter(row => row.range >= 0.5);
+      const still = result.rows.filter(row => row.range < 0.5);
+      const name = row => M.BY_KEY[row.key].short || M.BY_KEY[row.key].label;
+      const shown = (row, value) => display(M.BY_KEY[row.key], value);
+      setLegend(fig, [{ name: 'Input ' + percent + ' higher', color: 'c1' }, { name: 'Input ' + percent + ' lower', color: 'c2' }]);
+
+      if (fig.showTable) {
+        fig.table.replaceChildren(buildTable(
+          ['Input', 'Lower value', 'Higher value', 'Net profit at lower value', 'Net profit at higher value', 'Change at lower value', 'Change at higher value'],
+          result.rows.map(row => [name(row), shown(row, row.low), shown(row, row.high), cash(row.netLow), cash(row.netHigh),
+            { text: moneyChange(row.deltaLow), neg: isLoss(row.deltaLow) }, { text: moneyChange(row.deltaHigh), neg: isLoss(row.deltaHigh) }])));
+        return;
+      }
+
+      const top = moving.slice(0, 10);
+      let lo = 0;
+      let hi = 0;
+      top.forEach(row => { lo = Math.min(lo, row.deltaLow, row.deltaHigh); hi = Math.max(hi, row.deltaLow, row.deltaHigh); });
+      const scale = niceScale(lo, hi, 4, false);
+      const format = tickFormat('money', scale);
+      const pos = v => (v - scale.min) / (scale.max - scale.min) * 100;
+      const zero = pos(0);
+
+      const bar = (delta, cls) => {
+        const at = pos(delta);
+        const rounded = delta < 0 ? '4px 0 0 4px' : '0 4px 4px 0';
+        return el('span', { class: 't-bar ' + cls, style: 'left:' + r2(Math.min(zero, at)) + '%;width:' + r2(Math.abs(at - zero)) + '%;border-radius:' + rounded });
+      };
+      const list = el('div', { role: 'list' });
+      top.forEach(row => {
+        const node = el('div', {
+          class: 't-row', role: 'listitem', tabindex: '0',
+          'aria-label': name(row) + '. At ' + shown(row, row.high) + ' net profit changes by ' + moneyChange(row.deltaHigh) + '. At ' + shown(row, row.low) + ' it changes by ' + moneyChange(row.deltaLow) + '.'
+        },
+          el('div', { class: 't-name' }, name(row), el('span', { class: 't-range', text: shown(row, row.low) + ' to ' + shown(row, row.high) })),
+          el('div', { class: 't-track' }, bar(row.deltaHigh, 'hi bg-c1'), bar(row.deltaLow, 'lo bg-c2')),
+          el('div', { class: 't-figure', text: '$' + short(row.range) }));
+        const reveal = (x, y) => {
+          fillTip(tip, name(row), [
+            { color: 'c1', value: moneyChange(row.deltaHigh), name: 'at ' + shown(row, row.high) + ', net profit ' + money(row.netHigh) },
+            { color: 'c2', value: moneyChange(row.deltaLow), name: 'at ' + shown(row, row.low) + ', net profit ' + money(row.netLow) }]);
+          placeTip(tip, x, y, fig.body.clientWidth, fig.body.clientHeight);
+        };
+        const atPointer = e => { const box = fig.body.getBoundingClientRect(); reveal(e.clientX - box.left, e.clientY - box.top); };
+        node.addEventListener('pointermove', atPointer);
+        node.addEventListener('pointerdown', atPointer);
+        node.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') tip.hidden = true; });
+        node.addEventListener('focus', () => {
+          if (!keyboardFocus(node)) return;
+          const box = fig.body.getBoundingClientRect();
+          const own = node.getBoundingClientRect();
+          reveal(own.left - box.left + own.width * 0.4, own.top - box.top + own.height / 2);
+        });
+        node.addEventListener('blur', () => { tip.hidden = true; });
+        list.append(node);
+      });
+
+      const notes = [];
+      if (moving.length > top.length) notes.push('The chart shows the ' + top.length + ' inputs with the largest effect. The table lists all of them.');
+      if (still.length) {
+        notes.push('A ' + percent + ' change in these inputs leaves net profit unchanged in this scenario: ' +
+          still.map(row => name(row) + (row.low === row.high ? ' (now ' + shown(row, row.base) + ')' : '')).join(', ') + '.');
+      }
+      tip.hidden = true;
+      fig.body.replaceChildren(
+        el('div', { class: 'tornado' },
+          el('div', { class: 't-head' }, el('span', { text: 'Input and the two values tested' }), el('span', { text: 'Change in net profit' }), el('span', { text: 'Range' })),
+          el('div', { class: 't-rows' },
+            el('div', { class: 't-grid', 'aria-hidden': 'true' }, scale.ticks.map(t => el('i', { class: Math.abs(t) < scale.step / 1000 ? 'zero' : null, style: 'left:' + r2(pos(t)) + '%' }))),
+            list),
+          el('div', { class: 't-axis', 'aria-hidden': 'true' }, el('span'), el('div', { class: 't-ticks' }, scale.ticks.map(t => el('span', { style: 'left:' + r2(pos(t)) + '%', text: format(t) }))), el('span'))),
+        notes.length ? el('p', { class: 'note', text: notes.join(' ') }) : null,
+        tip);
+
+      // Where the bars have little width, keep only the axis labels that have room:
+      // zero first, then the two ends, then the rest.
+      const labels = Array.from(fig.body.querySelectorAll('.t-ticks span'));
+      if (fig.body.clientWidth > 0) {
+        const kept = [];
+        labels
+          .map((node, k) => ({ node: node, box: node.getBoundingClientRect(), rank: Math.abs(scale.ticks[k]) < scale.step / 1000 ? 0 : k === 0 || k === labels.length - 1 ? 1 : 2 }))
+          .sort((a, b) => a.rank - b.rank)
+          .forEach(item => {
+            const crowded = kept.some(other => item.box.left < other.box.right + 6 && item.box.right > other.box.left - 6);
+            item.node.style.visibility = crowded ? 'hidden' : '';
+            if (!crowded) kept.push(item);
+          });
+      }
+    }
+
+    /* ---------- Yearly and monthly tables ---------- */
+    function renderYearly() {
+      const sim = state.sim;
+      const sum = state.summary;
+      const staff = v => num(v, sim.inputs.allow_fractional_staff ? 2 : 0);
+      const rows = M.yearly(sim);
+      $('yearly').replaceChildren(buildTable(
+        ['Year', 'Revenue', 'Staff costs', 'Other costs', 'Total costs', 'Profit', 'Cumulative profit', 'Active studies at year end', 'Research assistants / coordinators at year end'],
+        rows.map(r => [r.months < 12 ? r.year + ' (' + r.months + ' months)' : String(r.year), money(r.revenue), money(r.costStaff), money(r.costOther),
+          money(r.costs), cash(r.net), cash(r.cumulative), num(r.active, 2), staff(r.ra) + ' / ' + staff(r.coordinators)]),
+        ['Total', money(sum.revenue), money(sum.costStaff), money(sum.costOther), money(sum.costs), cash(sum.netProfit), cash(sum.finalCumulative), '', '']));
+
+      const item = (label, value, cls) => {
+        const rich = typeof value === 'object';
+        return el('div', { class: cls || null }, el('dt', { text: label }), el('dd', { class: rich && value.neg ? 'neg' : null, text: rich ? value.text : value }));
+      };
+      $('totals').replaceChildren(
+        el('dl', {},
+          item('Studies started', num(sum.studiesStarted, 1)),
+          item('Studies completed', num(sum.studiesCompleted, 1)),
+          item('Patients recruited', num(sum.patients, 1)),
+          item('Revenue before overhead', money(sum.grossRevenue)),
+          item('Institutional overhead', money(sum.overhead)),
+          item('Revenue', money(sum.revenue), 'sum')),
+        el('dl', {},
+          item('Research assistant salaries and benefits', money(sum.costRA)),
+          item('Coordinator salaries and benefits', money(sum.costCoordinators)),
+          item('Severance accrual', money(sum.costSeverance)),
+          item('Staff administration', money(sum.costStaffAdmin)),
+          item('Per patient expenses', money(sum.costPatients)),
+          item('Study initiation and closeout costs', money(sum.costStartup + sum.costCloseout)),
+          item('Fixed costs', money(sum.costFixed)),
+          item('Total costs', money(sum.costs), 'sum'),
+          item('Net profit', cash(sum.netProfit), 'sum')));
+    }
+
+    function renderMonthly() {
+      const sim = state.sim;
+      const s = sim.series;
+      const staff = v => num(v, sim.inputs.allow_fractional_staff ? 2 : 0);
+      $('monthly').replaceChildren(buildTable(
+        ['Month', 'Active studies', 'Patients recruited', 'Research assistants', 'Coordinators', 'Revenue', 'Staff costs', 'Other costs', 'Net profit', 'Cumulative net profit'],
+        indexes(sim.months).map(i => [String(i + 1), num(s.active[i], 2), num(s.patients[i], 2), staff(s.ra[i]), staff(s.coordinators[i]),
+          money(s.revenue[i]), money(s.costStaff[i]), money(s.costOther[i]), cash(s.net[i]), cash(s.cumulative[i])])));
+    }
+
+    /* ---------- Tabs ---------- */
+    const tabButtons = Array.from(document.querySelectorAll('#tabs [role="tab"]'));
+
+    function renderTab() {
+      if (state.tab === 'sensitivity') renderSensitivity();
+      if (state.tab === 'yearly') renderYearly();
+      if (state.tab === 'monthly') renderMonthly();
+    }
+
+    function selectTab(id, moveFocus) {
+      state.tab = TABS.indexOf(id) < 0 ? 'overview' : id;
+      const strip = $('tabs');
+      tabButtons.forEach(button => {
+        const on = button.dataset.tab === state.tab;
+        button.setAttribute('aria-selected', String(on));
+        button.tabIndex = on ? 0 : -1;
+        $('panel-' + button.dataset.tab).hidden = !on;
+        if (!on) return;
+        if (moveFocus) button.focus({ preventScroll: true });
+        // Bring the tab into view within the strip, without scrolling the page.
+        const left = button.offsetLeft;
+        const right = left + button.offsetWidth;
+        if (left < strip.scrollLeft) strip.scrollLeft = left;
+        else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
+      });
+      renderTab();
+      drawCharts();
+      updatePin();
+      saveUrlSoon();
+    }
+
+    function buildTabs() {
+      tabButtons.forEach((button, i) => {
+        button.addEventListener('click', () => selectTab(button.dataset.tab, false));
+        button.addEventListener('keydown', e => {
+          const count = tabButtons.length;
+          const moves = { ArrowRight: (i + 1) % count, ArrowLeft: (i + count - 1) % count, Home: 0, End: count - 1 };
+          if (!(e.key in moves)) return;
+          e.preventDefault();
+          selectTab(tabButtons[moves[e.key]].dataset.tab, true);
+        });
+      });
+    }
+
+    /* ---------- Keeping the results in view ---------- */
+    function updatePin() {
+      const results = $('results');
+      results.classList.toggle('is-pinned', results.offsetHeight <= window.innerHeight - 24);
+    }
+
+    /* ---------- Link, CSV file, reset ---------- */
+    // The address of this page with the current assumptions and tab after the "#".
+    function shareUrl() {
+      const query = [M.encode(state.inputs), state.tab !== 'overview' ? 'view=' + state.tab : ''].filter(Boolean).join('&');
+      return location.href.replace(/[?#].*$/, '') + (query ? '#' + query : '');
+    }
+    let urlTimer = 0;
+    function saveUrl() {
+      clearTimeout(urlTimer);
+      try { history.replaceState(null, '', shareUrl()); } catch (err) { /* some embedded previews do not allow it; the page works without */ }
+    }
+    function saveUrlSoon() { clearTimeout(urlTimer); urlTimer = setTimeout(saveUrl, 250); }
+
+    function readUrl() {
+      const text = location.hash.length > 1 ? location.hash : location.search;
+      state.inputs = M.decode(text);
+      const view = new URLSearchParams(text.replace(/^[#?]/, '')).get('view');
+      state.tab = TABS.indexOf(view) < 0 ? 'overview' : view;
+    }
+
+    function copyLink() {
+      saveUrl();
+      const url = shareUrl();
+      const fallback = () => {
+        const field = el('textarea', { readonly: true, style: 'position:fixed;top:0;left:0;opacity:0' });
+        field.value = url;
+        document.body.append(field);
+        field.select();
+        let ok;
+        try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+        field.remove();
+        toast(ok ? 'Link copied.' : 'Copy the link from the address bar.');
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast('Link copied.'), fallback);
+      else fallback();
+    }
+
+    function downloadCsv() {
+      const url = URL.createObjectURL(new Blob([M.toCsv(state.sim)], { type: 'text/csv;charset=utf-8' }));
+      const link = el('a', { href: url, download: 'trial-unit-forecast.csv' });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function resetInputs() {
+      const before = Object.assign({}, state.inputs);
+      if (M.encode(before) === '') { toast('The assumptions are already at their defaults.'); return; }
+      applyInputs(M.DEFAULTS);
+      toast('Assumptions reset to their defaults.', 'Undo', () => { applyInputs(before); toast('Assumptions restored.'); });
+    }
+
+    /* ---------- Recalculate and redraw ---------- */
+    function recalc() {
+      state.sim = M.simulate(state.inputs);
+      state.summary = M.summarize(state.sim);
+      renderKpis();
+      renderCharts();
+      renderTab();
+      updatePin();
+      saveUrlSoon();
+    }
+
+    let queued = false;
+    function schedule() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; recalc(); });
+    }
+
+    /* ---------- Start ---------- */
+    readUrl();
+    buildInputs();
+    buildDefinitions();
+    buildKpis();
+    buildCharts();
+    buildTabs();
+    recalc();
+    selectTab(state.tab, false);
+
+    $('copy-link').addEventListener('click', copyLink);
+    $('download-csv').addEventListener('click', downloadCsv);
+    $('download-csv-2').addEventListener('click', downloadCsv);
+    $('reset').addEventListener('click', resetInputs);
+    window.addEventListener('hashchange', () => { readUrl(); PARAMS.forEach(p => syncField(p.key)); selectTab(state.tab, false); recalc(); });
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { drawCharts(); if (state.tab === 'sensitivity') renderSensitivity(); updatePin(); }, 100);
+    });
+    if ('ResizeObserver' in window) new ResizeObserver(updatePin).observe($('results'));
+  })();
+  </script>
+</body>
 </html>
