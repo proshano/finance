@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="Forecast the revenue, costs, staffing and break-even point of a new clinical trial unit.">
+  <meta name="description" content="See when a new clinical trial unit breaks even, what it earns and how much funding it needs.">
   <title>Pavel's Finance Simulator</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M8 23v-5M13.5 23v-9M19 23v-7M24.5 23V9' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M7 20c3 4 6 4 9 0s6-9 9-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 
   <!--
     This page is one file with no outside dependencies. It has three parts:
@@ -19,21 +19,25 @@
     /* ---------- Colours ---------- */
     :root {
       color-scheme: light;
-      --page: #f9f9f7;
-      --surface: #fcfcfb;
-      --surface-2: #f1f0ec;
-      --ink: #0b0b0b;
-      --ink-2: #52514e;
-      --muted: #6b6a65;
-      --border: rgba(11, 11, 11, 0.10);
-      --border-strong: rgba(11, 11, 11, 0.22);
-      --control: #898781;
-      --hover: rgba(11, 11, 11, 0.05);
-      --shade: rgba(11, 11, 11, 0.14);
-      --grid: #e1e0d9;
+      --page: #f5f4f0;
+      --surface: #ffffff;
+      --soft: #f3f2ee;
+      --well: #e9e7e1;
+      --ink: #111110;
+      --ink-2: #55534e;
+      --muted: #6a6862;
+      --line: rgba(17, 17, 16, 0.09);
+      --line-strong: rgba(17, 17, 16, 0.18);
+      --control: #85837c;
+      --track: #e2e0da;
+      --hover: rgba(17, 17, 16, 0.05);
+      --shade: rgba(17, 17, 16, 0.16);
+      --shadow: 0 1px 2px rgba(17, 17, 16, 0.04), 0 10px 30px rgba(17, 17, 16, 0.05);
+      --grid: #e9e7e1;
       --axis: #c3c2b7;
-      --accent: #256abf;
+      --accent: #1f5fb0;
       --accent-fill: #2a78d6;
+      --accent-soft: #e8f0fb;
       --neg: #c43131;
       --good: #0ca30c;
       --bad: #d03b3b;
@@ -47,21 +51,25 @@
     @media (prefers-color-scheme: dark) {
       :root {
         color-scheme: dark;
-        --page: #0d0d0d;
+        --page: #0d0d0c;
         --surface: #1a1a19;
-        --surface-2: #242422;
-        --ink: #f0efec;
-        --ink-2: #c3c2b7;
-        --muted: #9a988f;
-        --border: rgba(255, 255, 255, 0.10);
-        --border-strong: rgba(255, 255, 255, 0.24);
-        --control: #898781;
+        --soft: #232321;
+        --well: #262624;
+        --ink: #f1f0ed;
+        --ink-2: #c4c3b9;
+        --muted: #9c9a91;
+        --line: rgba(255, 255, 255, 0.09);
+        --line-strong: rgba(255, 255, 255, 0.2);
+        --control: #8a8880;
+        --track: #3a3a37;
         --hover: rgba(255, 255, 255, 0.06);
-        --shade: rgba(255, 255, 255, 0.16);
+        --shade: rgba(255, 255, 255, 0.18);
+        --shadow: none;
         --grid: #2c2c2a;
-        --axis: #383835;
-        --accent: #6da7ec;
+        --axis: #3b3b38;
+        --accent: #7fb3f0;
         --accent-fill: #3987e5;
+        --accent-soft: #1c2a3f;
         --neg: #ee7f7f;
         --good: #0ca30c;
         --bad: #d03b3b;
@@ -81,183 +89,247 @@
       margin: 0;
       background: var(--page);
       color: var(--ink);
-      font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
     h1, h2, h3, h4, p, dl, dd, ul { margin: 0; }
     button, input { font: inherit; color: inherit; }
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .wrap { max-width: 1360px; margin: 0 auto; padding: 0 24px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 0 28px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
     .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
     .btn {
-      border: 1px solid var(--control);
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 15px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
       background: var(--surface);
-      border-radius: 8px;
-      padding: 6px 12px;
+      font-size: 14px;
       font-weight: 550;
+      white-space: nowrap;
       cursor: pointer;
     }
-    .btn:hover { background: var(--surface-2); }
-    .btn.quiet {
-      border-color: transparent;
+    .btn:hover { background: var(--soft); }
+    .link {
+      border: 0;
+      padding: 4px 8px;
+      margin: -4px -8px;
+      border-radius: 8px;
       background: none;
       color: var(--accent);
-      padding: 3px 8px;
-      font-size: 12.5px;
+      font-size: 13.5px;
+      font-weight: 550;
       white-space: nowrap;
+      cursor: pointer;
     }
-    .btn.quiet:hover { background: var(--hover); }
+    .link:hover { background: var(--hover); }
+    .link:disabled { color: var(--muted); opacity: 0.55; background: none; cursor: default; }
 
     /* ---------- Header ---------- */
-    .app-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 12px 24px;
-      padding-top: 20px;
-      padding-bottom: 16px;
+    .top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 20px;
+      padding-top: 30px;
+      padding-bottom: 24px;
     }
-    .app-header h1 { font-size: 20px; line-height: 1.25; font-weight: 650; letter-spacing: -0.01em; }
-    .lede { color: var(--ink-2); margin-top: 3px; }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
-
-    /* Headline figures that stay in view on small screens */
-    .mini {
-      display: none;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      padding: 7px 14px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-    }
-    .mini div { min-width: 0; }
-    .mini small { display: block; font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .mini b { font-size: 15px; font-weight: 650; white-space: nowrap; }
+    .top h1 { font-size: 22px; line-height: 1.2; font-weight: 650; letter-spacing: -0.015em; }
+    .lede { grid-column: 1; color: var(--ink-2); margin-top: 4px; }
+    .top .btn { grid-column: 2; grid-row: 1 / span 2; align-self: end; }
 
     /* ---------- Layout ---------- */
     .layout {
       display: grid;
-      grid-template-columns: clamp(290px, 26vw, 340px) minmax(0, 1fr);
-      gap: 20px;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 28px;
       align-items: start;
-      padding-bottom: 24px;
+      padding-bottom: 32px;
     }
     .results { min-width: 0; }
-    /* Results stay beside the inputs while the page scrolls, when they fit the window. */
-    @media (min-width: 961px) { .results.is-pinned { position: sticky; top: 12px; } }
+    /* A column that fits the window stays in view while the other one scrolls. */
+    @media (min-width: 961px) { .is-pinned { position: sticky; top: 16px; } }
 
-    /* ---------- Inputs ---------- */
-    .inputs { padding: 4px 16px 10px; }
-    .inputs-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 0 6px; }
-    .inputs-head h2 { font-size: 15px; font-weight: 650; }
-    .group { border-top: 1px solid var(--border); }
-    .group > summary { cursor: pointer; padding: 10px 0 8px; font-weight: 650; font-size: 13px; border-radius: 4px; }
-    .group-body { padding-bottom: 6px; }
+    /* ---------- Assumptions ---------- */
+    .inputs { padding: 20px 22px 10px; }
+    .inputs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .inputs-head h2 { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+    .inputs-hint { color: var(--muted); font-size: 13px; margin: 1px 0 16px; }
+
     .field {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      column-gap: 10px;
-      padding: 2px 0 6px;
+      align-items: baseline;
+      column-gap: 12px;
+      padding-bottom: 9px;
     }
-    .field label { font-size: 13px; line-height: 1.3; color: var(--ink-2); }
+    .field label { font-size: 14px; line-height: 1.35; }
+    /* A blue dot marks an input that differs from its default. */
+    .dot { display: none; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: var(--accent-fill); vertical-align: middle; transform: translateY(-1px); }
+    .is-changed .dot { display: inline-block; }
+    .num {
+      box-sizing: content-box;
+      min-width: 2ch;
+      padding: 1px 2px 2px;
+      border: 0;
+      border-bottom: 1px solid var(--control);
+      border-radius: 0;
+      background: none;
+      text-align: right;
+      font-size: 14px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .num:hover { border-bottom-color: var(--accent); background: var(--soft); }
+    .num:focus-visible { outline-offset: 3px; border-radius: 3px; }
+
+    /* Sliders: a thin track, filled up to a round handle. */
     .field input[type="range"] {
       grid-column: 1 / -1;
-      width: 100%;
-      height: 24px;
-      margin: 1px 0 0;
-      accent-color: var(--accent-fill);
-      cursor: pointer;
-    }
-    .num {
-      width: 86px;
-      padding: 3px 7px;
-      text-align: right;
-      font-size: 13px;
-      font-variant-numeric: tabular-nums;
-      background: var(--surface);
-      border: 1px solid var(--control);
-      border-radius: 6px;
-    }
-    .switch { display: flex; align-items: center; gap: 10px; min-height: 28px; font-size: 13px; color: var(--ink); cursor: pointer; }
-    .toggle { padding: 4px 0 2px; }
-    /* The knob is drawn as a background, which every browser paints on a checkbox. */
-    .switch input {
-      appearance: none;
       -webkit-appearance: none;
-      flex: none;
-      width: 36px;
-      height: 20px;
+      appearance: none;
+      width: 100%;
+      height: 28px;
       margin: 0;
-      border-radius: 10px;
-      background: radial-gradient(circle at 10px 50%, #fff 7.5px, transparent 8.5px) var(--control);
+      background: none;
+      cursor: pointer;
+      --ratio: 0.5;
+      --fill: calc(9px + (100% - 18px) * var(--ratio));
+    }
+    .field input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(to right, var(--accent-fill) var(--fill), var(--track) var(--fill));
+    }
+    .field input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--track); }
+    .field input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent-fill); }
+    .field input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      box-sizing: border-box;
+      width: 18px;
+      height: 18px;
+      margin-top: -7px;
+      border: 3px solid var(--surface);
+      border-radius: 50%;
+      background: var(--accent-fill);
+      box-shadow: 0 0 0 1px var(--line-strong), 0 1px 4px rgba(17, 17, 16, 0.25);
+    }
+    .field input[type="range"]::-moz-range-thumb {
+      box-sizing: border-box;
+      width: 18px;
+      height: 18px;
+      border: 3px solid var(--surface);
+      border-radius: 50%;
+      background: var(--accent-fill);
+      box-shadow: 0 0 0 1px var(--line-strong), 0 1px 4px rgba(17, 17, 16, 0.25);
+    }
+    .field input[type="range"]:focus-visible { outline: none; }
+    .field input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+    .field input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+    @media (forced-colors: active) {
+      .field input[type="range"] { -webkit-appearance: auto; appearance: auto; }
+    }
+
+    /* Groups of further assumptions, closed until wanted. */
+    .group { margin: 0 -22px; padding: 0 22px; border-top: 1px solid var(--line); }
+    .group > summary { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-radius: 8px; list-style: none; cursor: pointer; }
+    .group > summary::-webkit-details-marker { display: none; }
+    .g-text { flex: 1; min-width: 0; }
+    .g-title { display: block; font-size: 14.5px; font-weight: 600; line-height: 1.3; }
+    .g-sub { display: block; font-size: 12.5px; color: var(--muted); }
+    .badge { flex: none; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 600; }
+    .chev { flex: none; color: var(--muted); transition: transform 0.15s; }
+    .group[open] > summary .chev { transform: rotate(180deg); }
+    .group-body { padding-bottom: 8px; }
+    .group > .group-body { padding-top: 2px; }
+
+    .toggle { padding: 4px 0 6px; }
+    /* The knob is drawn as a background, which every browser paints on a checkbox. */
+    .switch { display: flex; align-items: center; gap: 11px; min-height: 28px; font-size: 14px; cursor: pointer; }
+    .switch input {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: none;
+      width: 38px;
+      height: 22px;
+      margin: 0;
+      border-radius: 11px;
+      background: radial-gradient(circle at 11px 50%, #fff 8px, transparent 9px) var(--control);
       cursor: pointer;
     }
-    .switch input:checked { background: radial-gradient(circle at 26px 50%, #fff 7.5px, transparent 8.5px) var(--accent-fill); }
-    .help { font-size: 12px; line-height: 1.4; color: var(--muted); margin-top: 2px; }
+    .switch input:checked { background: radial-gradient(circle at 27px 50%, #fff 8px, transparent 9px) var(--accent-fill); }
+    .help { font-size: 12.5px; line-height: 1.45; color: var(--muted); margin-top: 3px; }
 
-    /* ---------- Headline figures ---------- */
-    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
-    .tile { padding: 11px 14px 12px; min-width: 0; }
-    .tile dt { font-size: 12.5px; color: var(--ink-2); }
-    .tile .k-value { font-size: 26px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin-top: 1px; }
-    .tile .k-note { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; color: var(--ink-2); margin-top: 1px; }
+    /* ---------- Summary: the answer, then three figures ---------- */
+    .verdict { font-size: clamp(27px, 2.8vw, 36px); line-height: 1.12; font-weight: 650; letter-spacing: -0.022em; }
+    .verdict-sub { display: flex; align-items: baseline; gap: 8px; margin-top: 7px; color: var(--ink-2); }
     /* Good is a round dot and bad a diamond, so the two differ by shape as well as colour. */
     .status { flex: none; width: 8px; height: 8px; border-radius: 50%; transform: translateY(-1px); }
     .status.good { background: var(--good); }
     .status.bad { background: var(--bad); border-radius: 1px; transform: translateY(-1px) rotate(45deg); }
+    .figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 20px 0 18px; }
+    .figure { min-width: 0; padding: 14px 20px 15px; border-left: 1px solid var(--line); }
+    .figure:first-child { border-left: 0; }
+    .figure dt { font-size: 13px; color: var(--ink-2); }
+    .figure .k-value { font-size: 25px; line-height: 1.2; font-weight: 650; letter-spacing: -0.015em; margin-top: 2px; }
+    .figure .k-note { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; font-size: 13px; color: var(--ink-2); }
+
+    /* The same figures in a slim bar, shown on small screens once the summary has scrolled away. */
+    .mini { display: none; }
 
     /* ---------- Tabs ---------- */
     .tabs {
       position: relative;
       display: flex;
       gap: 2px;
-      margin-bottom: 12px;
-      border-bottom: 1px solid var(--border);
+      width: fit-content;
+      max-width: 100%;
+      margin-bottom: 14px;
+      padding: 3px;
+      border-radius: 12px;
       overflow-x: auto;
       scrollbar-width: none;
       /* A soft shadow at either edge shows that more tabs lie that way. */
       background:
-        linear-gradient(90deg, var(--page) 40%, transparent) 0 0 / 32px 100% no-repeat local,
-        linear-gradient(270deg, var(--page) 40%, transparent) 100% 0 / 32px 100% no-repeat local,
+        linear-gradient(90deg, var(--well) 40%, transparent) 0 0 / 32px 100% no-repeat local,
+        linear-gradient(270deg, var(--well) 40%, transparent) 100% 0 / 32px 100% no-repeat local,
         linear-gradient(90deg, var(--shade), transparent) 0 0 / 14px 100% no-repeat scroll,
-        linear-gradient(270deg, var(--shade), transparent) 100% 0 / 14px 100% no-repeat scroll;
+        linear-gradient(270deg, var(--shade), transparent) 100% 0 / 14px 100% no-repeat scroll,
+        var(--well);
     }
     .tabs::-webkit-scrollbar { display: none; }
     .tab {
       flex: none;
       border: 0;
+      padding: 7px 13px;
+      border-radius: 9px;
       background: none;
-      padding: 9px 12px;
-      border-radius: 6px 6px 0 0;
       color: var(--ink-2);
+      font-size: 14px;
       font-weight: 550;
       white-space: nowrap;
       cursor: pointer;
     }
-    .tab:hover { color: var(--ink); background: var(--hover); }
-    .tab[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); }
+    .tab:hover { color: var(--ink); }
+    .tab[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(17, 17, 16, 0.12), 0 0 0 1px var(--line); }
     .tab:focus-visible { outline-offset: -2px; }
-    .panel > * + * { margin-top: 12px; }
-    .panel:focus-visible { outline-offset: 4px; border-radius: 8px; }
-    .block { padding: 12px 14px; }
+    .panel > * + * { margin-top: 14px; }
+    .panel:focus-visible { outline-offset: 4px; border-radius: 12px; }
+    .block { padding: 18px 20px 16px; }
 
     /* ---------- Figures (charts and their table views) ---------- */
-    .fig-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
-    .fig-head h3 { font-size: 14px; font-weight: 650; }
-    .hint { font-weight: 400; font-size: 12.5px; color: var(--ink-2); }
-    h3 .hint { margin-left: 8px; }
-    .legend { display: flex; flex-wrap: wrap; gap: 3px 14px; margin: 2px 0 4px; font-size: 12.5px; color: var(--ink-2); }
+    .fig-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+    .fig-head h3, .more-title { font-size: 15px; font-weight: 650; }
+    .hint { font-weight: 400; font-size: 13px; color: var(--muted); }
+    h3 .hint, .more-title + .hint { margin-left: 8px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 3px 16px; margin: 2px 0 6px; font-size: 13px; color: var(--ink-2); }
     .legend span { white-space: nowrap; }
-    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
     .sw.line { width: 14px; height: 2px; border-radius: 1px; vertical-align: middle; }
     .fig-body { position: relative; }
-    .plot { position: relative; touch-action: pan-y; border-radius: 6px; }
+    .plot { position: relative; touch-action: pan-y; border-radius: 8px; }
     .plot svg { position: absolute; inset: 0; display: block; }
     svg text { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
     svg text.label { font-size: 12px; fill: var(--ink-2); font-variant-numeric: normal; }
@@ -266,8 +338,8 @@
     .grid { stroke: var(--grid); }
     .axis { stroke: var(--axis); }
     .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-    .area { opacity: 0.1; }
-    .dot { stroke: var(--surface); stroke-width: 2; }
+    .area { opacity: 0.11; }
+    .mark { stroke: var(--surface); stroke-width: 2; }
     .band { fill: var(--hover); }
     .fill-c1 { fill: var(--s1); } .stroke-c1 { stroke: var(--s1); } .bg-c1 { background: var(--s1); }
     .fill-c2 { fill: var(--s2); } .stroke-c2 { stroke: var(--s2); } .bg-c2 { background: var(--s2); }
@@ -281,123 +353,178 @@
       z-index: 3;
       pointer-events: none;
       min-width: 150px;
-      padding: 8px 10px;
+      padding: 9px 12px;
       background: var(--surface);
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
-      font-size: 12.5px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+      font-size: 13px;
     }
-    .tip-title { color: var(--ink-2); margin-bottom: 3px; white-space: nowrap; }
+    .tip-title { color: var(--muted); margin-bottom: 3px; white-space: nowrap; }
     .tip-row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
     .tip-row .key { flex: none; width: 12px; height: 3px; border-radius: 2px; }
     .tip-row b { font-weight: 650; font-variant-numeric: tabular-nums; }
     .tip-row .name { color: var(--ink-2); }
-    .tip-row.total { margin-top: 3px; padding-top: 3px; border-top: 1px solid var(--border); }
+    .tip-row.total { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); }
 
     /* ---------- Tables ---------- */
-    .table-scroll { overflow-x: auto; }
-    table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .data th, .data td { padding: 6px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
-    .data thead th { font-size: 12.5px; font-weight: 600; color: var(--ink-2); vertical-align: bottom; white-space: normal; }
+    /* A table wider than its card scrolls sideways. A soft shadow at an edge shows there is more that way. */
+    .table-scroll {
+      overflow-x: auto;
+      border-radius: 6px;
+      background:
+        linear-gradient(90deg, var(--surface) 40%, transparent) 0 0 / 28px 100% no-repeat local,
+        linear-gradient(270deg, var(--surface) 40%, transparent) 100% 0 / 28px 100% no-repeat local,
+        linear-gradient(90deg, var(--shade), transparent) 0 0 / 12px 100% no-repeat scroll,
+        linear-gradient(270deg, var(--shade), transparent) 100% 0 / 12px 100% no-repeat scroll;
+    }
+    table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .data th, .data td { padding: 7px 8px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
+    .data thead th { font-size: 12.5px; font-weight: 600; color: var(--muted); vertical-align: bottom; white-space: normal; }
     .data tbody th { font-weight: 500; }
     .data .n { text-align: right; font-variant-numeric: tabular-nums; }
-    .data tfoot th, .data tfoot td { font-weight: 650; border-bottom: 0; border-top: 1px solid var(--border-strong); }
+    .data tfoot th, .data tfoot td { font-weight: 650; border-bottom: 0; border-top: 1px solid var(--line-strong); }
     .data th:first-child, .data td:first-child { padding-left: 2px; }
     .data th:last-child, .data td:last-child { padding-right: 2px; }
     .neg { color: var(--neg); }
-    .totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
-    .totals dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 36px; }
+    .totals dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
     .totals dt { color: var(--ink-2); }
     .totals dd { font-weight: 550; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .totals .sum dt, .totals .sum dd { color: var(--ink); font-weight: 650; }
     .totals .sum dd.neg { color: var(--neg); }
+    .more > summary { display: flex; align-items: center; gap: 10px; list-style: none; cursor: pointer; border-radius: 8px; }
+    .more > summary::-webkit-details-marker { display: none; }
+    .more > summary .chev { margin-left: auto; }
+    .more[open] > summary { margin-bottom: 10px; }
+    .more[open] > summary .chev { transform: rotate(180deg); }
+    .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
     /* ---------- Sensitivity chart ---------- */
     .tornado { --name: 36%; --figure: 62px; }
     .t-head, .t-row, .t-axis { display: grid; grid-template-columns: var(--name) minmax(0, 1fr) var(--figure); column-gap: 12px; align-items: center; }
-    .t-head { font-size: 12px; line-height: 1.25; color: var(--muted); padding-bottom: 2px; }
+    .t-head { font-size: 12px; line-height: 1.25; color: var(--muted); padding-bottom: 3px; }
     .t-head :last-child, .t-figure { text-align: right; }
     .t-rows { position: relative; }
     .t-grid { position: absolute; top: 0; bottom: 0; left: calc(var(--name) + 12px); right: calc(var(--figure) + 12px); pointer-events: none; }
     .t-grid i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); }
     .t-grid i.zero { background: var(--axis); }
-    .t-row { position: relative; padding: 4px 0; border-radius: 6px; }
+    .t-row { position: relative; padding: 5px 0; border-radius: 8px; }
     .t-row:hover { background: var(--hover); }
-    .t-name { min-width: 0; font-size: 13px; line-height: 1.25; }
-    .t-range { display: block; font-size: 11.5px; color: var(--muted); }
+    .t-name { min-width: 0; font-size: 13.5px; line-height: 1.25; }
+    .t-range { display: block; font-size: 12px; color: var(--muted); }
     .t-track { position: relative; height: 20px; }
     .t-bar { position: absolute; height: 8px; min-width: 1px; }
     .t-bar.hi { top: 1px; }
     .t-bar.lo { top: 11px; }
-    .t-figure { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-    .t-axis { margin-top: 2px; }
+    .t-figure { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .t-axis { margin-top: 3px; }
     .t-ticks { position: relative; height: 16px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
     .t-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
-    .note { font-size: 12.5px; color: var(--ink-2); margin-top: 8px; }
+    .note { font-size: 13px; color: var(--ink-2); margin-top: 10px; }
 
     /* ---------- How it works ---------- */
-    .prose { padding: 16px 20px 20px; }
-    .prose > * { max-width: 78ch; }
-    .prose h3 { font-size: 16px; font-weight: 650; margin: 22px 0 6px; }
+    .prose { padding: 22px 26px 26px; }
+    .prose > * { max-width: 76ch; }
+    .prose h3 { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; margin: 26px 0 6px; }
     .prose h3:first-child { margin-top: 0; }
-    .prose h4 { font-size: 13.5px; font-weight: 650; margin: 14px 0 4px; }
+    .prose h4 { font-size: 14px; font-weight: 650; margin: 16px 0 4px; }
     .prose p, .prose li { color: var(--ink-2); }
     .prose > p + p { margin-top: 8px; }
     .prose ul { padding-left: 20px; }
-    .prose li { margin: 3px 0; }
-    .defs dt { font-weight: 600; margin-top: 7px; }
+    .prose li { margin: 4px 0; }
+    .defs dt { font-weight: 600; margin-top: 8px; }
     .defs dd { color: var(--ink-2); }
     .prose > .formula {
       max-width: none;
       margin: 4px 0 10px;
-      padding: 9px 12px;
-      background: var(--surface-2);
-      border-radius: 8px;
-      font: 12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      padding: 10px 14px;
+      background: var(--soft);
+      border-radius: 10px;
+      font: 12.5px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
     /* A formula that wraps continues indented under its first line. */
     .formula p { color: var(--ink); padding-left: 3ch; text-indent: -3ch; }
     .formula p.gap { margin-top: 8px; }
 
     /* ---------- Footer and messages ---------- */
-    .app-footer { padding-bottom: 28px; font-size: 12.5px; color: var(--muted); }
+    .app-footer { padding-bottom: 32px; font-size: 13px; color: var(--muted); }
     .toast {
       position: fixed;
       left: 50%;
-      bottom: 20px;
+      bottom: 22px;
       transform: translateX(-50%);
       z-index: 20;
       display: flex;
       align-items: center;
       gap: 12px;
       max-width: calc(100vw - 24px);
-      padding: 9px 14px;
+      padding: 10px 16px;
       background: var(--ink);
       color: var(--page);
-      border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      font-size: 13px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+      font-size: 14px;
     }
     .toast button { border: 0; padding: 0; background: none; color: inherit; font-weight: 650; text-decoration: underline; cursor: pointer; }
     .toast button:focus-visible { outline-color: var(--page); }
-    .noscript { margin: 16px 24px; padding: 12px 14px; }
+    .noscript { margin: 16px 28px; padding: 14px 16px; }
 
     /* ---------- Smaller screens ---------- */
-    @media (max-width: 1200px) {
-      .tile .k-value { font-size: 22px; }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 320px minmax(0, 1fr); gap: 22px; }
+      .figure { padding: 13px 16px 14px; }
+      .figure .k-value { font-size: 22px; }
     }
     @media (max-width: 960px) {
-      .wrap { padding: 0 14px; }
-      .layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-      .mini { display: grid; }
+      .wrap { padding: 0 16px; }
+      .top { padding-top: 22px; padding-bottom: 18px; }
+      .layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+      /* The answer comes first on a phone, the assumptions after it. */
+      .results { order: -1; }
+      .mini {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        padding: 8px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        box-shadow: 0 6px 20px rgba(17, 17, 16, 0.08);
+      }
+      .mini div { min-width: 0; }
+      .mini small { display: block; font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .mini b { font-size: 15px; font-weight: 650; white-space: nowrap; }
     }
     @media (max-width: 640px) {
-      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .top h1 { font-size: 20px; }
+      .top .lede { grid-column: 1 / -1; }
+      .top .btn { grid-row: 1; align-self: start; }
+      .figures { grid-template-columns: minmax(0, 1fr); }
+      .figure {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "label value" "note value";
+        align-items: center;
+        column-gap: 12px;
+        padding: 11px 16px 12px;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+      .figure:first-child { border-top: 0; }
+      .figure dt { grid-area: label; }
+      .figure .k-value { grid-area: value; margin: 0; }
+      .figure .k-note { grid-area: note; margin: 0; }
+      .block { padding: 16px 16px 14px; }
       .totals { grid-template-columns: minmax(0, 1fr); }
       .tornado { --name: 40%; --figure: 52px; }
       .fig-head { flex-wrap: wrap; }
       h3 .hint { display: block; margin-left: 0; }
+      .prose { padding: 18px 18px 22px; }
     }
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; scroll-behavior: auto !important; }
@@ -405,54 +532,53 @@
   </style>
 </head>
 <body>
-  <header class="wrap app-header">
-    <div>
-      <h1>Pavel's financial simulator for new trial units</h1>
-      <p class="lede">Forecast the revenue, costs and staffing of a new clinical trial unit. The results update as you change the assumptions.</p>
-    </div>
-    <div class="actions">
-      <button type="button" class="btn" id="copy-link">Copy link</button>
-      <button type="button" class="btn" id="download-csv">Download CSV</button>
-    </div>
+  <header class="wrap top">
+    <h1>Pavel's financial simulator for new trial units</h1>
+    <p class="lede">Change an assumption to see when the unit breaks even and what it earns.</p>
+    <button type="button" class="btn" id="copy-link">Copy link</button>
   </header>
 
-  <!-- Repeats the headline figures for small screens, so screen readers skip it. -->
-  <div class="mini" id="mini" aria-hidden="true"></div>
+  <!-- Repeats the summary figures for small screens, so screen readers skip it. -->
+  <div class="mini" id="mini" aria-hidden="true" hidden></div>
 
   <noscript><p class="card noscript">This simulator needs JavaScript. Turn it on in your browser and reload the page.</p></noscript>
 
   <div class="wrap layout">
-    <aside class="card inputs" aria-labelledby="inputs-title">
+    <aside class="card inputs" id="assumptions" aria-labelledby="inputs-title">
       <div class="inputs-head">
         <h2 id="inputs-title">Assumptions</h2>
-        <button type="button" class="btn quiet" id="reset">Reset to defaults</button>
+        <button type="button" class="link" id="reset" disabled>Reset</button>
       </div>
+      <p class="inputs-hint">Drag a slider or type a value.</p>
       <div id="inputs"></div>
     </aside>
 
     <main class="results" id="results">
       <h2 class="sr-only">Results</h2>
-      <section aria-label="Headline figures">
-        <dl class="kpis" id="kpis"></dl>
+      <section id="summary" aria-label="Summary">
+        <div role="status">
+          <p class="verdict" id="verdict" data-kpi="even"></p>
+          <p class="verdict-sub"><span class="status" id="verdict-mark" aria-hidden="true"></span><span id="verdict-detail"></span></p>
+        </div>
+        <dl class="card figures" id="figures"></dl>
       </section>
 
       <div class="tabs" id="tabs" role="tablist" aria-label="Results">
         <button type="button" class="tab" role="tab" id="tab-overview" data-tab="overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
         <button type="button" class="tab" role="tab" id="tab-costs" data-tab="costs" aria-controls="panel-costs" aria-selected="false" tabindex="-1">Revenue and costs</button>
         <button type="button" class="tab" role="tab" id="tab-staffing" data-tab="staffing" aria-controls="panel-staffing" aria-selected="false" tabindex="-1">Staffing</button>
-        <button type="button" class="tab" role="tab" id="tab-sensitivity" data-tab="sensitivity" aria-controls="panel-sensitivity" aria-selected="false" tabindex="-1">Sensitivity</button>
-        <button type="button" class="tab" role="tab" id="tab-yearly" data-tab="yearly" aria-controls="panel-yearly" aria-selected="false" tabindex="-1">Yearly breakdown</button>
-        <button type="button" class="tab" role="tab" id="tab-monthly" data-tab="monthly" aria-controls="panel-monthly" aria-selected="false" tabindex="-1">Monthly detail</button>
+        <button type="button" class="tab" role="tab" id="tab-sensitivity" data-tab="sensitivity" aria-controls="panel-sensitivity" aria-selected="false" tabindex="-1">What matters most</button>
+        <button type="button" class="tab" role="tab" id="tab-tables" data-tab="tables" aria-controls="panel-tables" aria-selected="false" tabindex="-1">Tables</button>
         <button type="button" class="tab" role="tab" id="tab-about" data-tab="about" aria-controls="panel-about" aria-selected="false" tabindex="-1">How it works</button>
       </div>
 
       <section class="panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
         <div class="card block" id="chart-cumulative"></div>
-        <div class="card block" id="chart-monthly"></div>
       </section>
 
       <section class="panel" id="panel-costs" role="tabpanel" aria-labelledby="tab-costs" tabindex="0" hidden>
         <div class="card block" id="chart-costs"></div>
+        <div class="card block" id="chart-monthly"></div>
       </section>
 
       <section class="panel" id="panel-staffing" role="tabpanel" aria-labelledby="tab-staffing" tabindex="0" hidden>
@@ -464,24 +590,25 @@
         <div class="card block" id="sensitivity"></div>
       </section>
 
-      <section class="panel" id="panel-yearly" role="tabpanel" aria-labelledby="tab-yearly" tabindex="0" hidden>
+      <section class="panel" id="panel-tables" role="tabpanel" aria-labelledby="tab-tables" tabindex="0" hidden>
         <div class="card block">
-          <div class="fig-head"><h3>End-of-year reports</h3></div>
-          <section class="table-scroll" id="yearly" tabindex="0" aria-label="End-of-year reports"></section>
+          <div class="fig-head"><h3>Year by year <span class="hint">Studies and staff are the numbers at the end of each year</span></h3></div>
+          <section class="table-scroll" id="yearly" tabindex="0" aria-label="Year by year"></section>
         </div>
         <div class="card block">
           <div class="fig-head"><h3>Totals over the forecast</h3></div>
           <div class="totals" id="totals"></div>
         </div>
-      </section>
-
-      <section class="panel" id="panel-monthly" role="tabpanel" aria-labelledby="tab-monthly" tabindex="0" hidden>
-        <div class="card block">
-          <div class="fig-head">
-            <h3>Month-by-month figures <span class="hint">The CSV file adds every revenue and cost line.</span></h3>
-            <button type="button" class="btn quiet" id="download-csv-2">Download CSV</button>
-          </div>
-          <section class="table-scroll" id="monthly" tabindex="0" aria-label="Month-by-month figures"></section>
+        <details class="card block more" id="monthly-box">
+          <summary>
+            <span class="more-title">Month by month</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </summary>
+          <section class="table-scroll" id="monthly" tabindex="0" aria-label="Month by month"></section>
+        </details>
+        <div class="bar">
+          <p class="hint">The CSV file lists every revenue and cost line for each month.</p>
+          <button type="button" class="btn" id="download-csv">Download CSV</button>
         </div>
       </section>
 
@@ -489,18 +616,18 @@
         <div class="card prose">
           <h3>What the simulator does</h3>
           <p>The simulator forecasts the monthly revenue, costs and staffing of a new clinical trial unit. It starts new studies at a steady rate, recruits patients into every active study, hires staff as the number of active studies grows, and adds up the result month by month.</p>
-          <p>Change any assumption and every figure, chart and table updates. Copy link saves the current assumptions in a web address that you can share.</p>
+          <p>Change any assumption and every figure, chart and table updates. The six assumptions shown first have the largest effect on net profit at their default values. The others sit in the three groups beneath them. Copy link saves the current assumptions in a web address that you can share.</p>
 
-          <h3>Headline figures</h3>
+          <h3>The summary</h3>
           <dl class="defs">
-            <dt>Net profit</dt>
-            <dd>Revenue after institutional overhead, minus all costs, added up over the forecast.</dd>
             <dt>Break-even</dt>
             <dd>The first month from which cumulative net profit stays at or above zero until the end of the forecast.</dd>
+            <dt>Net profit</dt>
+            <dd>Revenue after institutional overhead, minus all costs, added up over the forecast.</dd>
             <dt>Funding needed</dt>
             <dd>The largest cumulative loss during the forecast. The unit must cover this amount from other sources before it pays for itself.</dd>
-            <dt>Net profit, final 12 months</dt>
-            <dd>Net profit over the last 12 months of the forecast.</dd>
+            <dt>Net profit, last 12 months</dt>
+            <dd>Net profit over the final 12 months of the forecast.</dd>
           </dl>
 
           <h3>Assumptions</h3>
@@ -512,7 +639,7 @@
             <p>New studies per month = New studies per year ÷ 12</p>
             <p>Active studies in month M = New studies per month × (M or the study duration, whichever is smaller)</p>
             <p>Studies closed in month M = New studies per month, once M is greater than the study duration</p>
-            <p>Patients recruited = Active studies × Patients recruited per study per month</p>
+            <p>Patients recruited = Active studies × Patients per study per month</p>
           </div>
 
           <h4>Inflation and raises</h4>
@@ -584,65 +711,55 @@
   (function (root) {
     'use strict';
 
+    // The first group is always in view. The others open on request.
     const GROUPS = [
-      { id: 'forecast', title: 'Forecast' },
-      { id: 'pipeline', title: 'Study pipeline' },
-      { id: 'budget', title: 'Study payments and costs' },
-      { id: 'finance', title: 'Finance' },
-      { id: 'staff', title: 'Staffing' }
+      { id: 'essentials', title: 'The essentials', sub: '' },
+      { id: 'fees', title: 'Study start and closeout', sub: 'Fees and costs per study' },
+      { id: 'staff', title: 'Staffing', sub: 'Salaries, workload and benefits' },
+      { id: 'finance', title: 'Forecast and finance', sub: 'Length, inflation and fixed costs' }
     ];
 
     // One entry per input. The input panel, the definitions, the shared link
     // and the sensitivity analysis are all built from this list.
     //   kind      money | percent | count | toggle
+    //   unit      for counts: [singular, plural] shown after the value
     //   min, max  range of the slider and of typed values
     //   step      slider step
     //   decimals  precision kept for typed values
     //   def       default
     //   hardMin, hardMax  limits the model itself needs (default: 0 and none)
     const PARAMS = [
-      { key: 'total_months', group: 'forecast', label: 'Forecast length (months)', short: 'Forecast length', kind: 'count',
-        min: 12, max: 60, step: 1, decimals: 0, def: 60, whole: true, hardMin: 1, hardMax: 600, vary: false,
-        help: 'Number of months the forecast covers.' },
-
-      { key: 'new_studies_per_year', group: 'pipeline', label: 'New studies per year', kind: 'count',
+      { key: 'new_studies_per_year', group: 'essentials', label: 'New studies per year', kind: 'count',
         min: 1, max: 20, step: 1, decimals: 1, def: 4,
         help: 'Number of studies the unit starts each year. Starts are spread evenly across the months.' },
-      { key: 'study_duration', group: 'pipeline', label: 'Study duration (months)', short: 'Study duration', kind: 'count',
+      { key: 'study_duration', group: 'essentials', label: 'Study duration', kind: 'count', unit: ['month', 'months'],
         min: 1, max: 60, step: 1, decimals: 0, def: 24, whole: true, hardMin: 1,
         help: 'Number of months each study stays active and recruits patients. Closeout follows in the next month.' },
-      { key: 'patients_per_month', group: 'pipeline', label: 'Patients recruited per study per month', kind: 'count',
+      { key: 'patients_per_month', group: 'essentials', label: 'Patients per study per month', kind: 'count',
         min: 0, max: 5, step: 0.1, decimals: 2, def: 0.3,
         help: 'Average number of patients each active study recruits per month.' },
-
-      { key: 'per_patient_payment', group: 'budget', label: 'Per patient payment', kind: 'money',
+      { key: 'per_patient_payment', group: 'essentials', label: 'Per patient payment', kind: 'money',
         min: 0, max: 50000, step: 1000, decimals: 0, def: 30000,
         help: 'Amount the sponsor pays for each patient recruited, before institutional overhead.' },
-      { key: 'per_patient_expense', group: 'budget', label: 'Per patient expenses (excluding staff)', short: 'Per patient expenses', kind: 'money',
+      { key: 'per_patient_expense', group: 'essentials', label: 'Per patient expenses', kind: 'money',
         min: 0, max: 20000, step: 500, decimals: 0, def: 10000,
         help: 'Cost of each patient recruited, excluding staff costs.' },
-      { key: 'startup_revenue', group: 'budget', label: 'Revenue per study initiation', kind: 'money',
-        min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
-        help: 'Amount received for starting a study, before institutional overhead.' },
-      { key: 'startup_cost', group: 'budget', label: 'Cost per study initiation', kind: 'money',
-        min: 0, max: 10000, step: 500, decimals: 0, def: 3500,
-        help: 'Cost of starting a study.' },
-      { key: 'closeout_revenue', group: 'budget', label: 'Revenue per study closeout', kind: 'money',
-        min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
-        help: 'Amount received when a study closes, before institutional overhead.' },
-      { key: 'closeout_cost', group: 'budget', label: 'Cost per study closeout', kind: 'money',
-        min: 0, max: 10000, step: 500, decimals: 0, def: 3500,
-        help: 'Cost of closing a study.' },
-
-      { key: 'institute_overhead', group: 'finance', label: 'Institutional overhead', kind: 'percent',
+      { key: 'institute_overhead', group: 'essentials', label: 'Institutional overhead', kind: 'percent',
         min: 0, max: 50, step: 1, decimals: 2, def: 30, hardMax: 100,
         help: 'Share of all study revenue that the institution keeps. The unit receives the rest.' },
-      { key: 'inflation_rate', group: 'finance', label: 'Annual inflation rate', kind: 'percent',
-        min: 0, max: 10, step: 0.5, decimals: 2, def: 3,
-        help: 'Yearly increase applied to revenue, costs and salaries from year 2.' },
-      { key: 'fixed_costs', group: 'finance', label: 'Monthly fixed costs', kind: 'money',
-        min: 0, max: 50000, step: 1000, decimals: 0, def: 0,
-        help: 'Costs that do not depend on activity, such as rent and utilities.' },
+
+      { key: 'startup_revenue', group: 'fees', label: 'Revenue per study initiation', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
+        help: 'Amount received for starting a study, before institutional overhead.' },
+      { key: 'startup_cost', group: 'fees', label: 'Cost per study initiation', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 3500,
+        help: 'Cost of starting a study.' },
+      { key: 'closeout_revenue', group: 'fees', label: 'Revenue per study closeout', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
+        help: 'Amount received when a study closes, before institutional overhead.' },
+      { key: 'closeout_cost', group: 'fees', label: 'Cost per study closeout', kind: 'money',
+        min: 0, max: 10000, step: 500, decimals: 0, def: 3500,
+        help: 'Cost of closing a study.' },
 
       { key: 'ra_salary', group: 'staff', label: 'Monthly research assistant salary', kind: 'money',
         min: 0, max: 10000, step: 500, decimals: 0, def: 4000,
@@ -656,7 +773,7 @@
       { key: 'studies_per_coordinator', group: 'staff', label: 'Studies per coordinator', kind: 'count',
         min: 1, max: 15, step: 0.5, decimals: 1, def: 10, hardMin: 0.1,
         help: 'Number of active studies one coordinator can support.' },
-      { key: 'annual_raise', group: 'staff', label: 'Annual raise (above inflation)', short: 'Annual raise', kind: 'percent',
+      { key: 'annual_raise', group: 'staff', label: 'Annual raise above inflation', short: 'Annual raise', kind: 'percent',
         min: 0, max: 10, step: 0.5, decimals: 2, def: 2,
         help: 'Yearly salary increase on top of inflation, applied from year 2.' },
       { key: 'benefits_rate', group: 'staff', label: 'Benefits (% of salary)', short: 'Benefits', kind: 'percent',
@@ -669,7 +786,17 @@
         min: 0, max: 10000, step: 500, decimals: 0, def: 5000,
         help: 'Yearly cost of managing each staff member. It rises with inflation.' },
       { key: 'allow_fractional_staff', group: 'staff', label: 'Allow fractional staff', kind: 'toggle', def: false,
-        help: 'When on, the unit can hire part of a position, such as 0.5 of a full-time role, as in a shared staffing model. When off, the unit hires whole positions only.' }
+        help: 'Lets the unit hire part of a position, such as 0.5 of a full-time role, as in a shared staffing model. When off, it hires whole positions only.' },
+
+      { key: 'total_months', group: 'finance', label: 'Forecast length', kind: 'count', unit: ['month', 'months'],
+        min: 12, max: 60, step: 1, decimals: 0, def: 60, whole: true, hardMin: 1, hardMax: 600, vary: false,
+        help: 'Number of months the forecast covers.' },
+      { key: 'inflation_rate', group: 'finance', label: 'Annual inflation rate', kind: 'percent',
+        min: 0, max: 10, step: 0.5, decimals: 2, def: 3,
+        help: 'Yearly increase applied to revenue, costs and salaries from year 2.' },
+      { key: 'fixed_costs', group: 'finance', label: 'Monthly fixed costs', kind: 'money',
+        min: 0, max: 50000, step: 1000, decimals: 0, def: 0,
+        help: 'Costs that do not depend on activity, such as rent and utilities.' }
     ];
 
     const BY_KEY = {};
@@ -960,7 +1087,7 @@
   </script>
 
   <!-- =====================================================================
-       PAGE. Inputs, headline figures, charts and tables.
+       PAGE. Inputs, summary, charts and tables.
        ===================================================================== -->
   <script id="app">
   (function () {
@@ -968,7 +1095,8 @@
 
     const M = window.TrialUnitModel;
     const PARAMS = M.PARAMS;
-    const TABS = ['overview', 'costs', 'staffing', 'sensitivity', 'yearly', 'monthly', 'about'];
+    const TABS = ['overview', 'costs', 'staffing', 'sensitivity', 'tables', 'about'];
+    const OLDER_TABS = { yearly: 'tables', monthly: 'tables' };   // names used in links made before these two were merged
     const state = { inputs: Object.assign({}, M.DEFAULTS), tab: 'overview', sim: null, summary: null };
 
     /* ---------- Building blocks ---------- */
@@ -992,6 +1120,10 @@
     const largest = values => Math.max.apply(null, values);
     // True when the keyboard put the focus there. Browsers too old to know the test count as true.
     const keyboardFocus = node => { try { return node.matches(':focus-visible'); } catch (err) { return true; } };
+    // Sets text only when it differs, so that screen readers are not told the same thing twice.
+    const setText = (node, text) => { if (node.textContent !== text) node.textContent = text; };
+    const chevron = () => sv('svg', { class: 'chev', width: 16, height: 16, viewBox: '0 0 16 16', 'aria-hidden': 'true' },
+      sv('path', { d: 'M4 6l4 4 4-4', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.75, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
 
     /* ---------- Number formats ---------- */
     const MINUS = '−';
@@ -1016,13 +1148,13 @@
     const moneyChange = v => (v <= -0.5 ? MINUS : v >= 0.5 ? '+' : '') + '$' + short(Math.abs(v));
     const isLoss = v => v <= -0.5;                           // shows as at least one dollar below zero
     const cash = v => ({ text: money(v), neg: isLoss(v) });
+    // "1 coordinator", "2 coordinators", "0.8 coordinators"
+    const counted = (text, value, one, many) => text + ' ' + (Math.abs(value - 1) < 1e-9 ? one : many);
     function display(p, v) {
       if (p.kind === 'money') return '$' + num(v, p.decimals);
       if (p.kind === 'percent') return num(v, p.decimals) + '%';
-      return num(v, p.decimals);
+      return p.unit ? counted(num(v, p.decimals), v, p.unit[0], p.unit[1]) : num(v, p.decimals);
     }
-    // "1 coordinator", "2 coordinators", "0.8 coordinators"
-    const counted = (text, value, one, many) => text + ' ' + (Math.abs(value - 1) < 1e-9 ? one : many);
 
     /* ---------- Messages ---------- */
     let toastTimer = 0;
@@ -1039,8 +1171,9 @@
       toastTimer = setTimeout(() => { box.hidden = true; }, actionLabel ? 8000 : 2600);
     }
 
-    /* ---------- Inputs ---------- */
-    const fields = {};                                       // key -> { slider, box } or { check }
+    /* ---------- Assumptions ---------- */
+    const fields = {};                                       // key -> { row, slider, box } or { row, check }
+    const groups = {};                                       // group id -> { details, badge }
 
     function syncField(key) {
       const p = M.BY_KEY[key];
@@ -1049,8 +1182,10 @@
       if (p.kind === 'toggle') { f.check.checked = v; return; }
       const text = display(p, v);
       f.slider.value = String(v);
+      f.slider.style.setProperty('--ratio', String(clamp((v - p.min) / (p.max - p.min), 0, 1)));
       f.slider.setAttribute('aria-valuetext', text);
       f.box.value = text;
+      f.box.style.width = 'calc(' + Math.max(2, text.length) + 'ch + 4px)';
     }
 
     function setInput(key, value) {
@@ -1078,41 +1213,73 @@
         setInput(p.key, Number.isFinite(typed) ? typed : state.inputs[p.key]);
       };
       slider.addEventListener('input', () => setInput(p.key, parseFloat(slider.value)));
-      box.addEventListener('focus', () => box.select());
+      box.addEventListener('focus', () => { box.style.width = '10ch'; box.select(); });   // room to type a longer value
+      box.addEventListener('blur', () => syncField(p.key));
       box.addEventListener('change', commit);
       box.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { commit(); box.select(); }
+        if (e.key === 'Enter') { commit(); box.style.width = '10ch'; box.select(); }
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault();
           setInput(p.key, state.inputs[p.key] + (e.key === 'ArrowUp' ? p.step : -p.step));
+          box.style.width = '10ch';
           box.select();
         }
       });
-      fields[p.key] = { slider: slider, box: box };
-      return el('div', { class: 'field' }, el('label', { for: id, title: p.help, text: p.label }), box, slider);
+      const row = el('div', { class: 'field' },
+        el('label', { for: id, title: p.help + ' Default: ' + display(p, p.def) + '.' }, el('span', { class: 'dot', 'aria-hidden': 'true' }), p.label),
+        box, slider);
+      fields[p.key] = { row: row, slider: slider, box: box };
+      return row;
     }
 
     function toggleField(p) {
       const id = 'in-' + p.key;
       const check = el('input', { type: 'checkbox', role: 'switch', id: id, 'aria-describedby': id + '-help' });
       check.addEventListener('change', () => setInput(p.key, check.checked));
-      fields[p.key] = { check: check };
-      return el('div', { class: 'toggle' },
-        el('label', { class: 'switch', for: id }, check, el('span', { text: p.label })),
+      const row = el('div', { class: 'toggle' },
+        el('label', { class: 'switch', for: id }, check, el('span', {}, el('span', { class: 'dot', 'aria-hidden': 'true' }), p.label)),
         el('p', { class: 'help', id: id + '-help', text: p.help }));
+      fields[p.key] = { row: row, check: check };
+      return row;
     }
 
     function buildInputs() {
-      // On small screens the groups start closed, so the results are not pushed far down the page.
-      const startOpen = !window.matchMedia('(max-width: 960px)').matches;
       M.GROUPS.forEach(group => {
         const body = el('div', { class: 'group-body' },
           PARAMS.filter(p => p.group === group.id).map(p => (p.kind === 'toggle' ? toggleField(p) : rangeField(p))));
-        const details = el('details', { class: 'group' }, el('summary', { text: group.title }), body);
-        details.open = startOpen;
+        if (group.id === 'essentials') { $('inputs').append(body); return; }
+        const badge = el('span', { class: 'badge', hidden: true });
+        const details = el('details', { class: 'group', id: 'group-' + group.id },
+          el('summary', {}, el('span', { class: 'g-text' }, el('span', { class: 'g-title', text: group.title }), el('span', { class: 'g-sub', text: group.sub })), badge, chevron()),
+          body);
+        details.addEventListener('toggle', updatePin);
+        groups[group.id] = { details: details, badge: badge };
         $('inputs').append(details);
       });
       PARAMS.forEach(p => syncField(p.key));
+    }
+
+    // Marks the inputs that differ from their defaults, and counts them on each closed group.
+    function markChanges() {
+      const count = {};
+      let total = 0;
+      PARAMS.forEach(p => {
+        const changed = state.inputs[p.key] !== p.def;
+        fields[p.key].row.classList.toggle('is-changed', changed);
+        if (changed) { total++; count[p.group] = (count[p.group] || 0) + 1; }
+      });
+      Object.keys(groups).forEach(id => {
+        groups[id].badge.hidden = !count[id];
+        groups[id].badge.textContent = (count[id] || 0) + ' changed';
+      });
+      $('reset').disabled = total === 0;
+    }
+
+    // A shared link can change an input inside a closed group. Open those groups so nothing is hidden.
+    function openChangedGroups() {
+      Object.keys(groups).forEach(id => {
+        if (PARAMS.some(p => p.group === id && state.inputs[p.key] !== p.def)) groups[id].details.open = true;
+      });
     }
 
     function buildDefinitions() {
@@ -1123,20 +1290,19 @@
       });
     }
 
-    /* ---------- Headline figures ---------- */
+    /* ---------- Summary ---------- */
     const tiles = {};
     const minis = {};
 
-    function buildKpis() {
+    function buildSummary() {
       const meaning = {
         net: 'Revenue after institutional overhead, minus all costs, added up over the forecast.',
-        even: 'The first month from which cumulative net profit stays at or above zero.',
         need: 'The largest cumulative loss during the forecast.',
-        last: 'Net profit over the last 12 months of the forecast.'
+        last: 'Net profit over the final 12 months of the forecast.'
       };
       Object.keys(meaning).forEach(id => {
         const t = { label: el('dt', { title: meaning[id] }), value: el('dd', { class: 'k-value' }), dot: el('span', { class: 'status', 'aria-hidden': 'true' }), note: el('span') };
-        $('kpis').append(el('div', { class: 'card tile', 'data-kpi': id }, t.label, t.value, el('dd', { class: 'k-note' }, t.dot, t.note)));
+        $('figures').append(el('div', { class: 'figure', 'data-kpi': id }, t.label, t.value, el('dd', { class: 'k-note' }, t.dot, t.note)));
         tiles[id] = t;
       });
       [['net', 'Net profit'], ['even', 'Break-even'], ['need', 'Funding needed']].forEach(pair => {
@@ -1157,28 +1323,52 @@
       if (minis[id]) minis[id].textContent = value;
     }
 
-    function renderKpis() {
+    function renderSummary() {
       const sum = state.summary;
+      const months = sum.months;
+      const wholeYears = months % 12 === 0;
+      const span = wholeYears ? (months === 12 ? '1 year' : months / 12 + ' years') : months + ' months';
+      const spanKind = wholeYears ? months / 12 + '-year' : months + '-month';
+
+      // The answer in one line.
+      let verdict;
+      let detail;
+      let tone;
+      let brief;
+      if (!sum.everInDeficit) {
+        const earns = sum.netProfit >= 0.5;
+        verdict = earns ? 'Profitable from the first month' : 'No profit and no loss';
+        detail = earns ? 'The unit never runs a cumulative loss' : 'Revenue equals costs over ' + span;
+        tone = earns ? 'good' : '';
+        brief = earns ? 'Month 1' : 'None';
+      } else if (sum.breakEvenMonth) {
+        verdict = 'Breaks even in month ' + sum.breakEvenMonth;
+        detail = 'Year ' + Math.ceil(sum.breakEvenMonth / 12) + ' of a ' + spanKind + ' forecast';
+        tone = 'good';
+        brief = 'Month ' + sum.breakEvenMonth;
+      } else {
+        verdict = 'Does not break even in ' + span;
+        detail = moneyShort(-sum.finalCumulative) + ' behind at month ' + months;
+        tone = 'bad';
+        brief = 'Not reached';
+      }
+      setText($('verdict'), verdict);
+      setText($('verdict-detail'), detail);
+      $('verdict-mark').hidden = !tone;
+      $('verdict-mark').className = 'status ' + tone;
+      minis.even.textContent = brief;
+
+      // Three figures. The share of revenue is left out when there is no revenue,
+      // or when a loss is many times the revenue.
       const profit = !isLoss(sum.netProfit);
-      // The share of revenue is left out when there is no revenue, or when a loss is many times the revenue.
       const ratio = sum.revenue > 0 ? Math.abs(sum.netProfit) / sum.revenue : Infinity;
       const share = ratio <= 10 ? ' · ' + num(ratio * 100, 1) + '% of revenue' : '';
-      setTile('net', 'Net profit over ' + sum.months + ' months', moneyShort(sum.netProfit),
+      setTile('net', 'Net profit over ' + span, moneyShort(sum.netProfit),
         (profit ? 'Profit' : 'Loss') + share, profit ? 'good' : 'bad', money(sum.netProfit));
-
-      if (!sum.everInDeficit) {
-        setTile('even', 'Break-even', 'No deficit', 'Cumulative profit never falls below zero', 'good');
-      } else if (sum.breakEvenMonth) {
-        setTile('even', 'Break-even', 'Month ' + sum.breakEvenMonth, 'Year ' + Math.ceil(sum.breakEvenMonth / 12) + ' of the forecast', 'good');
-      } else {
-        setTile('even', 'Break-even', 'Not reached', 'Cumulative loss of ' + moneyShort(-sum.finalCumulative) + ' at month ' + sum.months, 'bad');
-      }
-
       setTile('need', 'Funding needed', moneyShort(sum.fundingNeeded),
         sum.everInDeficit ? 'Peak cumulative loss, month ' + sum.lowestMonth : 'No cumulative loss in any month',
         '', money(sum.fundingNeeded));
-
-      setTile('last', 'Net profit, final ' + sum.lastMonths + ' months', moneyShort(sum.lastNet),
+      setTile('last', 'Net profit, last ' + sum.lastMonths + ' months', moneyShort(sum.lastNet),
         moneyShort(sum.lastNet / sum.lastMonths) + ' per month', isLoss(sum.lastNet) ? 'bad' : 'good', money(sum.lastNet));
     }
 
@@ -1196,7 +1386,7 @@
 
     /* ---------- Figures: a title, a legend, a chart and its table view ---------- */
     function createFigure(host, title, hint) {
-      const toggle = el('button', { type: 'button', class: 'btn quiet', text: 'Show table' });
+      const toggle = el('button', { type: 'button', class: 'link', text: 'Show table' });
       const fig = {
         legend: el('div', { class: 'legend' }),
         body: el('div', { class: 'fig-body' }),
@@ -1328,7 +1518,11 @@
         const x = geo.cx(i);
         if (geo.band) geo.band.setAttribute('x', r2(geo.L + geo.slot * i));
         if (geo.cross) { geo.cross.setAttribute('x1', r2(x)); geo.cross.setAttribute('x2', r2(x)); }
-        geo.dots.forEach(d => { d.node.setAttribute('cx', r2(x)); d.node.setAttribute('cy', r2(geo.y(d.values[i]))); });
+        geo.dots.forEach(d => {
+          d.node.setAttribute('class', 'mark fill-' + d.tone(d.values[i]));
+          d.node.setAttribute('cx', r2(x));
+          d.node.setAttribute('cy', r2(geo.y(d.values[i])));
+        });
         setCursor(true);
         const info = spec.tip(i);
         fillTip(tip, info.title, info.rows);
@@ -1362,7 +1556,7 @@
         const see = v => { if (v < lo) lo = v; if (v > hi) hi = v; };
         if (bars.length) for (let i = 0; i < n; i++) see(bars.reduce((t, b) => t + b.values[i], 0));
         lines.forEach(l => l.values.forEach(see));
-        const scale = niceScale(lo, hi, Math.max(2, Math.floor(plotH / 40)), spec.whole, kind === 'money' ? 1000 : 1);
+        const scale = niceScale(lo, hi, Math.max(2, Math.floor(plotH / 44)), spec.whole, kind === 'money' ? 1000 : 1);
 
         // Keep room under a named low point for its label.
         let floor = scale.min;
@@ -1453,7 +1647,8 @@
         }
         root.append(sv('line', { class: 'axis', x1: L, x2: L + plotW, y1: crisp(y0), y2: crisp(y0) }));
 
-        // Lines. Stepped lines hold their value across the month.
+        // Lines. Stepped lines hold their value across the month. A line with a second
+        // colour takes it below zero, so profit and loss read apart at a glance.
         const lineEnds = [];
         lines.forEach(l => {
           const pts = [];
@@ -1464,13 +1659,27 @@
           }
           const d = pts.map((pt, k) => (k ? 'L' : 'M') + r2(pt[0]) + ',' + r2(pt[1])).join('');
           const end = pts[pts.length - 1];
-          if (l.area) root.append(sv('path', { class: 'area fill-' + l.color, d: d + 'L' + r2(end[0]) + ',' + r2(y0) + 'L' + r2(pts[0][0]) + ',' + r2(y0) + 'Z' }));
-          root.append(sv('path', { class: 'line stroke-' + l.color, d: d }));
-          root.append(sv('circle', { class: 'dot fill-' + l.color, cx: r2(end[0]), cy: r2(end[1]), r: 4 }));
+          const filled = d + 'L' + r2(end[0]) + ',' + r2(y0) + 'L' + r2(pts[0][0]) + ',' + r2(y0) + 'Z';
+          const tone = v => (l.negColor && v < 0 ? l.negColor : l.color);
+          const strokes = [[l.color, null]];
+          if (l.negColor) {
+            const above = hostId + '-above';
+            const below = hostId + '-below';
+            root.append(sv('defs', {},
+              sv('clipPath', { id: above }, sv('rect', { x: 0, y: 0, width: W, height: r2(clamp(y0, 0, H)) })),
+              sv('clipPath', { id: below }, sv('rect', { x: 0, y: r2(clamp(y0, 0, H)), width: W, height: r2(H - clamp(y0, 0, H)) }))));
+            strokes[0][1] = 'url(#' + above + ')';
+            strokes.push([l.negColor, 'url(#' + below + ')']);
+          }
+          strokes.forEach(pair => {
+            if (l.area) root.append(sv('path', { class: 'area fill-' + pair[0], d: filled, 'clip-path': pair[1] }));
+            root.append(sv('path', { class: 'line stroke-' + pair[0], d: d, 'clip-path': pair[1] }));
+          });
+          root.append(sv('circle', { class: 'mark fill-' + tone(l.values[last]), cx: r2(end[0]), cy: r2(end[1]), r: 4 }));
           lineEnds.push({ line: l, x: end[0], y: end[1] });
-          const dot = sv('circle', { class: 'dot fill-' + l.color, r: 4 });
+          const dot = sv('circle', { class: 'mark fill-' + l.color, r: 4 });
           over.append(dot);
-          geo.dots.push({ node: dot, values: l.values });
+          geo.dots.push({ node: dot, values: l.values, tone: tone });
         });
 
         // Labels. One that would touch another is left out; the legend, the pointer
@@ -1510,7 +1719,7 @@
           const x = cx(mk.i);
           const yy = y(mk.value);
           const w = textWidth(mk.text, 12);
-          root.append(sv('circle', { class: 'dot fill-' + mk.color, cx: r2(x), cy: r2(yy), r: 4 }));
+          root.append(sv('circle', { class: 'mark fill-' + mk.color, cx: r2(x), cy: r2(yy), r: 4 }));
           const corners = mk.below ? [[1, 1], [-1, 1], [1, -1], [-1, -1]] : [[-1, -1], [1, 1], [1, -1], [-1, 1]];
           const boxAt = c => {
             const x0 = c[0] > 0 ? x + 9 : x - 9 - w;
@@ -1563,12 +1772,12 @@
 
     const chart = {};
     function buildCharts() {
-      chart.cumulative = createChart('chart-cumulative', 'Cumulative net profit', 'Total profit or loss since month 1', [190, 0.30, 320], 'money');
-      chart.monthly = createChart('chart-monthly', 'Monthly net profit', 'Revenue minus costs in each month', [130, 0.19, 200], 'money');
-      chart.costs = createChart('chart-costs', 'Monthly revenue and costs', 'Revenue is shown after institutional overhead', [260, 0.46, 440], 'money');
-      chart.headcount = createChart('chart-headcount', 'Staff employed', 'Positions filled in each month', [150, 0.21, 230], 'count');
-      chart.staffcosts = createChart('chart-staffcosts', 'Monthly staff costs', 'Salaries, benefits, severance accrual and administration', [170, 0.25, 280], 'money');
-      chartGroups.push([chart.cumulative, chart.monthly], [chart.costs], [chart.headcount, chart.staffcosts]);
+      chart.cumulative = createChart('chart-cumulative', 'Cumulative net profit', 'Total profit or loss since month 1', [240, 0.42, 420], 'money');
+      chart.costs = createChart('chart-costs', 'Monthly revenue and costs', 'Revenue is shown after institutional overhead', [200, 0.27, 320], 'money');
+      chart.monthly = createChart('chart-monthly', 'Monthly net profit', 'Revenue minus costs in each month', [120, 0.15, 170], 'money');
+      chart.headcount = createChart('chart-headcount', 'Staff employed', 'Positions filled in each month', [130, 0.16, 190], 'count');
+      chart.staffcosts = createChart('chart-staffcosts', 'Monthly staff costs', 'Salaries and benefits, severance accrual and administration', [160, 0.22, 260], 'money');
+      chartGroups.push([chart.cumulative], [chart.costs, chart.monthly], [chart.headcount, chart.staffcosts]);
     }
 
     function renderCharts() {
@@ -1583,37 +1792,25 @@
       const monthTitle = i => 'Month ' + (i + 1) + ' (year ' + s.year[i] + ')';
       const startAndClose = s.costStartup.map((v, i) => v + s.costCloseout[i]);
       const used = values => values.some(v => v !== 0);
+      const sign = v => (v < 0 ? 'red' : 'c1');
 
-      // Cumulative net profit.
+      // Cumulative net profit: blue above zero, red below.
       const markers = [];
       if (sum.everInDeficit && sum.lowestMonth < n) {
-        markers.push({ i: sum.lowestMonth - 1, value: sum.lowest, color: 'c1', below: true, text: 'Lowest: ' + moneyShort(sum.lowest) + ', month ' + sum.lowestMonth });
+        markers.push({ i: sum.lowestMonth - 1, value: sum.lowest, color: 'red', below: true, text: 'Lowest: ' + moneyShort(sum.lowest) + ', month ' + sum.lowestMonth });
       }
       if (sum.breakEvenMonth) {
         markers.push({ i: sum.breakEvenMonth - 1, value: s.cumulative[sum.breakEvenMonth - 1], color: 'c1', below: false, text: 'Break-even, month ' + sum.breakEvenMonth });
       }
       chart.cumulative.spec = {
         n: n,
-        lines: [{ name: 'Cumulative net profit', color: 'c1', values: s.cumulative, area: true, end: moneyShort }],
+        lines: [{ name: 'Cumulative net profit', color: 'c1', negColor: 'red', values: s.cumulative, area: true, end: moneyShort }],
         markers: markers,
         describe: 'Cumulative net profit ends at ' + money(sum.finalCumulative) + ' in month ' + n + '.',
         tip: i => ({ title: monthTitle(i), rows: [
-          { color: 'c1', value: money(s.cumulative[i]), name: 'Cumulative net profit' },
+          { color: sign(s.cumulative[i]), value: money(s.cumulative[i]), name: 'Cumulative net profit' },
           { value: money(s.net[i]), name: 'Net profit this month' }] }),
         table: { head: ['Month', 'Net profit in the month', 'Cumulative net profit'], row: i => [String(i + 1), cash(s.net[i]), cash(s.cumulative[i])] }
-      };
-
-      // Monthly net profit. Blue above zero, red below.
-      chart.monthly.spec = {
-        n: n,
-        bars: [{ name: 'Net profit', color: 'c1', negColor: 'red', values: s.net }],
-        legend: [{ name: 'Profit', color: 'c1' }, { name: 'Loss', color: 'red' }],
-        describe: 'Net profit is ' + money(s.net[0]) + ' in month 1 and ' + money(s.net[n - 1]) + ' in month ' + n + '.',
-        tip: i => ({ title: monthTitle(i), rows: [
-          { color: s.net[i] < 0 ? 'red' : 'c1', value: money(s.net[i]), name: 'Net profit' },
-          { value: money(s.revenue[i]), name: 'Revenue' },
-          { value: money(s.costs[i]), name: 'Costs' }] }),
-        table: { head: ['Month', 'Revenue', 'Costs', 'Net profit'], row: i => [String(i + 1), money(s.revenue[i]), money(s.costs[i]), cash(s.net[i])] }
       };
 
       // Costs by type, with revenue as a line. A colour stays with its cost type when another type is unused.
@@ -1639,6 +1836,19 @@
         }
       };
 
+      // Monthly net profit. Blue above zero, red below.
+      chart.monthly.spec = {
+        n: n,
+        bars: [{ name: 'Net profit', color: 'c1', negColor: 'red', values: s.net }],
+        legend: [{ name: 'Profit', color: 'c1' }, { name: 'Loss', color: 'red' }],
+        describe: 'Net profit is ' + money(s.net[0]) + ' in month 1 and ' + money(s.net[n - 1]) + ' in month ' + n + '.',
+        tip: i => ({ title: monthTitle(i), rows: [
+          { color: sign(s.net[i]), value: money(s.net[i]), name: 'Net profit' },
+          { value: money(s.revenue[i]), name: 'Revenue' },
+          { value: money(s.costs[i]), name: 'Costs' }] }),
+        table: { head: ['Month', 'Revenue', 'Costs', 'Net profit'], row: i => [String(i + 1), money(s.revenue[i]), money(s.costs[i]), cash(s.net[i])] }
+      };
+
       // Staff employed.
       chart.headcount.spec = {
         n: n,
@@ -1657,16 +1867,16 @@
 
       // Staff costs by part.
       const staffParts = [
-        { name: 'Research assistant salaries and benefits', short: 'Assistants', color: 'c1', values: s.costRA },
-        { name: 'Coordinator salaries and benefits', short: 'Coordinators', color: 'c2', values: s.costCoordinators },
-        { name: 'Severance accrual', short: 'Severance', color: 'c3', values: s.costSeverance },
-        { name: 'Staff administration', short: 'Administration', color: 'c4', values: s.costStaffAdmin }
+        { name: 'Research assistant salaries and benefits', short: 'Assistants', key: 'Research assistants', color: 'c1', values: s.costRA },
+        { name: 'Coordinator salaries and benefits', short: 'Coordinators', key: 'Coordinators', color: 'c2', values: s.costCoordinators },
+        { name: 'Severance accrual', short: 'Severance', key: 'Severance accrual', color: 'c3', values: s.costSeverance },
+        { name: 'Staff administration', short: 'Administration', key: 'Administration', color: 'c4', values: s.costStaffAdmin }
       ].filter(part => used(part.values));
       chart.staffcosts.spec = {
         n: n,
         bars: staffParts,
         nameBars: true,
-        legend: staffParts.map(part => ({ name: part.name, color: part.color })),
+        legend: staffParts.map(part => ({ name: part.key, color: part.color })),
         describe: 'Staff costs are ' + money(s.costStaff[0]) + ' in month 1 and ' + money(s.costStaff[n - 1]) + ' in month ' + n + '.',
         tip: i => ({ title: monthTitle(i), rows: staffParts.map(part => ({ color: part.color, value: money(part.values[i]), name: part.name }))
           .concat([{ value: money(s.costStaff[i]), name: 'Staff costs', total: true }]) }),
@@ -1679,14 +1889,14 @@
       drawCharts();
     }
 
-    /* ---------- Sensitivity ---------- */
+    /* ---------- What matters most ---------- */
     let sensitivityFig = null;
     let sensitivityTip = null;
 
     function renderSensitivity() {
       if (!sensitivityFig) {
         sensitivityFig = createFigure($('sensitivity'), 'What moves net profit most',
-          'Change in net profit over the forecast when one input is 20% lower or higher and the others stay the same');
+          'How net profit changes when one input moves by 20% and the rest stay the same');
         sensitivityTip = el('div', { class: 'tip', role: 'status', hidden: true });
         sensitivityFig.redraw = renderSensitivity;
       }
@@ -1708,7 +1918,7 @@
         return;
       }
 
-      const top = moving.slice(0, 10);
+      const top = moving.slice(0, 8);
       let lo = 0;
       let hi = 0;
       top.forEach(row => { lo = Math.min(lo, row.deltaLow, row.deltaHigh); hi = Math.max(hi, row.deltaLow, row.deltaHigh); });
@@ -1784,15 +1994,16 @@
       }
     }
 
-    /* ---------- Yearly and monthly tables ---------- */
-    function renderYearly() {
+    /* ---------- Tables ---------- */
+    function renderTables() {
       const sim = state.sim;
+      const s = sim.series;
       const sum = state.summary;
       const staff = v => num(v, sim.inputs.allow_fractional_staff ? 2 : 0);
-      const rows = M.yearly(sim);
+
       $('yearly').replaceChildren(buildTable(
-        ['Year', 'Revenue', 'Staff costs', 'Other costs', 'Total costs', 'Profit', 'Cumulative profit', 'Active studies at year end', 'Research assistants / coordinators at year end'],
-        rows.map(r => [r.months < 12 ? r.year + ' (' + r.months + ' months)' : String(r.year), money(r.revenue), money(r.costStaff), money(r.costOther),
+        ['Year', 'Revenue', 'Staff costs', 'Other costs', 'Total costs', 'Profit', 'Cumulative profit', 'Active studies', 'Assistants / coordinators'],
+        M.yearly(sim).map(r => [r.months < 12 ? r.year + ' (' + r.months + ' months)' : String(r.year), money(r.revenue), money(r.costStaff), money(r.costOther),
           money(r.costs), cash(r.net), cash(r.cumulative), num(r.active, 2), staff(r.ra) + ' / ' + staff(r.coordinators)]),
         ['Total', money(sum.revenue), money(sum.costStaff), money(sum.costOther), money(sum.costs), cash(sum.netProfit), cash(sum.finalCumulative), '', '']));
 
@@ -1818,12 +2029,7 @@
           item('Fixed costs', money(sum.costFixed)),
           item('Total costs', money(sum.costs), 'sum'),
           item('Net profit', cash(sum.netProfit), 'sum')));
-    }
 
-    function renderMonthly() {
-      const sim = state.sim;
-      const s = sim.series;
-      const staff = v => num(v, sim.inputs.allow_fractional_staff ? 2 : 0);
       $('monthly').replaceChildren(buildTable(
         ['Month', 'Active studies', 'Patients recruited', 'Research assistants', 'Coordinators', 'Revenue', 'Staff costs', 'Other costs', 'Net profit', 'Cumulative net profit'],
         indexes(sim.months).map(i => [String(i + 1), num(s.active[i], 2), num(s.patients[i], 2), staff(s.ra[i]), staff(s.coordinators[i]),
@@ -1835,8 +2041,7 @@
 
     function renderTab() {
       if (state.tab === 'sensitivity') renderSensitivity();
-      if (state.tab === 'yearly') renderYearly();
-      if (state.tab === 'monthly') renderMonthly();
+      if (state.tab === 'tables') renderTables();
     }
 
     function selectTab(id, moveFocus) {
@@ -1874,10 +2079,13 @@
       });
     }
 
-    /* ---------- Keeping the results in view ---------- */
+    /* ---------- Keeping things in view ---------- */
+    // On a wide screen, a column that fits the window stays put while the other scrolls.
     function updatePin() {
-      const results = $('results');
-      results.classList.toggle('is-pinned', results.offsetHeight <= window.innerHeight - 24);
+      ['assumptions', 'results'].forEach(id => {
+        const column = $(id);
+        column.classList.toggle('is-pinned', column.offsetHeight <= window.innerHeight - 32);
+      });
     }
 
     /* ---------- Link, CSV file, reset ---------- */
@@ -1896,7 +2104,8 @@
     function readUrl() {
       const text = location.hash.length > 1 ? location.hash : location.search;
       state.inputs = M.decode(text);
-      const view = new URLSearchParams(text.replace(/^[#?]/, '')).get('view');
+      const asked = new URLSearchParams(text.replace(/^[#?]/, '')).get('view');
+      const view = OLDER_TABS[asked] || asked;
       state.tab = TABS.indexOf(view) < 0 ? 'overview' : view;
     }
 
@@ -1928,16 +2137,16 @@
 
     function resetInputs() {
       const before = Object.assign({}, state.inputs);
-      if (M.encode(before) === '') { toast('The assumptions are already at their defaults.'); return; }
       applyInputs(M.DEFAULTS);
-      toast('Assumptions reset to their defaults.', 'Undo', () => { applyInputs(before); toast('Assumptions restored.'); });
+      toast('Assumptions reset to their defaults.', 'Undo', () => { applyInputs(before); openChangedGroups(); toast('Assumptions restored.'); });
     }
 
     /* ---------- Recalculate and redraw ---------- */
     function recalc() {
       state.sim = M.simulate(state.inputs);
       state.summary = M.summarize(state.sim);
-      renderKpis();
+      markChanges();
+      renderSummary();
       renderCharts();
       renderTab();
       updatePin();
@@ -1954,8 +2163,9 @@
     /* ---------- Start ---------- */
     readUrl();
     buildInputs();
+    openChangedGroups();
     buildDefinitions();
-    buildKpis();
+    buildSummary();
     buildCharts();
     buildTabs();
     recalc();
@@ -1963,15 +2173,23 @@
 
     $('copy-link').addEventListener('click', copyLink);
     $('download-csv').addEventListener('click', downloadCsv);
-    $('download-csv-2').addEventListener('click', downloadCsv);
     $('reset').addEventListener('click', resetInputs);
-    window.addEventListener('hashchange', () => { readUrl(); PARAMS.forEach(p => syncField(p.key)); selectTab(state.tab, false); recalc(); });
+    $('monthly-box').addEventListener('toggle', updatePin);
+    window.addEventListener('hashchange', () => { readUrl(); PARAMS.forEach(p => syncField(p.key)); openChangedGroups(); selectTab(state.tab, false); recalc(); });
     let resizeTimer = 0;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => { drawCharts(); if (state.tab === 'sensitivity') renderSensitivity(); updatePin(); }, 100);
     });
-    if ('ResizeObserver' in window) new ResizeObserver(updatePin).observe($('results'));
+    if ('ResizeObserver' in window) {
+      const watch = new ResizeObserver(updatePin);
+      watch.observe($('results'));
+      watch.observe($('assumptions'));
+    }
+    // On a small screen, the slim bar of figures appears once the summary has scrolled out of view.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(entries => { $('mini').hidden = entries[0].isIntersecting; }).observe($('summary'));
+    }
   })();
   </script>
 </body>
